@@ -43,20 +43,20 @@ def make_xlsx(data,args, sheet_name=None, wb=None, column_widths=None):
     ws.append(title(args))
     ws.append(title1(args))
     ws.append([''])
-    ws.append(['','','','','','','','','','',"STANDARD SALARY",'','','','','','','','EARNINGS','','','','','','','','','','','','','','DEDUCTIONS'])
-    ws.append(['Sl No.','Employee No','DATE OF JOINING','Employee Name','Paid Days','Over Time (Hrs)','Arrear Days','Arr.Over Time (Hrs)','Salary Deduction','Shift Days','Basic+DA Salary','DA','HRA','Conveyance Allowance','Medical Allowance','Special  Allowance','Position Bonus','Gross Salary','Basic+DA Salary','DA','Arr. Basic Salary','HRA','Conveyance Allowance','Medical Allowance','Special  Allowance','Position Bonus','Incentives','Over Time','Arrears Over Time','Arrears Salary','Shift allowance','Gross Salary','PF','PT','ESI','IT Deduction','LWF','Salary Deduction','Total Deduction','Attendance Bonus','Casual Leave Encashment','Earned Leave Encashment','Bonus Yearly','Net Salary','Declared Holiday Bonus','Department','Cost Center','Cost Center Name'])
+    ws.append(['','','','','','','','','','','','','','',"STANDARD SALARY",'','','','','','','','EARNINGS','','','','','','','','','','','','','','DEDUCTIONS'])
+    ws.append(['Sl No.','Employee No','DATE OF JOINING','Employee Name','Department','Designation','Cost Center','Cost Center Name','Paid Days','Over Time (Hrs)','Arrear Days','Arr.Over Time (Hrs)','Salary Deduction','Shift Days','Basic+DA Salary','DA','HRA','Conveyance Allowance','Medical Allowance','Special  Allowance','Position Bonus','Gross Salary','Basic+DA Salary','DA','Arr. Basic Salary','HRA','Conveyance Allowance','Medical Allowance','Special  Allowance','Position Bonus','Incentives','Over Time','Arrears Over Time','Arrears Salary','Shift allowance','Gross Salary','PF','PT','ESI','IT Deduction','LWF','Insurance','Salary Deduction','Total Deduction','Attendance Bonus','Casual Leave Encashment','Earned Leave Encashment','Bonus Yearly','Net Salary','Declared Holiday Bonus'])
     emp= get_data(args)
     for e in emp:
         ws.append(e)
 
-    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=48 )
-    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=48 )
-    ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=48 )
-    ws.merge_cells(start_row=4, start_column=1, end_row=4, end_column=10 )
-    ws.merge_cells(start_row=4, start_column=11, end_row=4, end_column=18 )
-    ws.merge_cells(start_row=4, start_column=19, end_row=4, end_column=32 )
-    ws.merge_cells(start_row=4, start_column=33, end_row=4, end_column=39 )
-    ws.merge_cells(start_row=4, start_column=40, end_row=4, end_column=48 )
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=50 )
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=50 )
+    ws.merge_cells(start_row=3, start_column=1, end_row=3, end_column=50 )
+    ws.merge_cells(start_row=4, start_column=1, end_row=4, end_column=14 )
+    ws.merge_cells(start_row=4, start_column=15, end_row=4, end_column=22 )
+    ws.merge_cells(start_row=4, start_column=23, end_row=4, end_column=36 )
+    ws.merge_cells(start_row=4, start_column=37, end_row=4, end_column=44 )
+    ws.merge_cells(start_row=4, start_column=45, end_row=4, end_column=50 )
     border_thin = Border(
     left=Side(style='thin'),
     right=Side(style='thin'),
@@ -68,18 +68,18 @@ def make_xlsx(data,args, sheet_name=None, wb=None, column_widths=None):
     top=Side(style='thick'),
     bottom=Side(style='thick'))
     align_center = Alignment(horizontal='center',vertical='center')
-    for header in ws.iter_rows(min_row=1, max_row=2, min_col=1, max_col=48):
+    for header in ws.iter_rows(min_row=1, max_row=2, min_col=1, max_col=50):
         for cell in header:
             cell.font = Font(bold=True)
-    for header in ws.iter_rows(min_row=4, max_row=5, min_col=1, max_col=48):
-        for cell in header:
-            cell.font = Font(bold=True)
-            cell.alignment = align_center
-    for header in ws.iter_rows(min_row=len(get_data(args))+5, max_row=len(get_data(args))+5, min_col=1, max_col=48):
+    for header in ws.iter_rows(min_row=4, max_row=5, min_col=1, max_col=50):
         for cell in header:
             cell.font = Font(bold=True)
             cell.alignment = align_center
-    header_range = ws['A1':ws.cell(row=len(get_data(args))+5, column=48).coordinate]
+    for header in ws.iter_rows(min_row=len(get_data(args))+5, max_row=len(get_data(args))+5, min_col=1, max_col=50):
+        for cell in header:
+            cell.font = Font(bold=True)
+            cell.alignment = align_center
+    header_range = ws['A1':ws.cell(row=len(get_data(args))+5, column=50).coordinate]
     for row in header_range:
         for cell in row:
             cell.border = border_thin
@@ -163,6 +163,7 @@ def get_data(args):
     total_esi=0
     total_it_ded=0
     total_lwf=0
+    total_ins=0
     total_salary_ded_ss=0
     total_ded=0
     total_ab=0
@@ -190,7 +191,12 @@ def get_data(args):
         for e in emp:
             row=[indx,]
             row += [e.name,str(e.date_of_joining),e.employee_name]
+            row.append(ss.department)
+            row.append(ss.designation)
             
+            row.append(e.payroll_cost_center)
+            
+            row.append(ss.department)
             row.append(ss.payment_days or '')
             if ss.payment_days:
                 total_pd+=ss.payment_days
@@ -282,7 +288,7 @@ def get_data(args):
             if ss.gross_pay:
                 total_gross_pay+=ss.gross_pay
             row.append(ss.gross_pay)
-            pf = frappe.db.get_value("Salary Detail",{'parent':ss.name,"salary_component":"Provident Fund"},['amount']) or 0
+            pf = frappe.db.get_value("Salary Detail",{'parent':ss.name,"salary_component":"PF"},['amount']) or 0
             if pf:
                 total_pf+=pf
             row.append(pf or '-')
@@ -290,7 +296,7 @@ def get_data(args):
             if pt:
                 total_pt+=pt
             row.append(pt or '-')
-            esi = frappe.db.get_value("Salary Detail",{'parent':ss.name,"salary_component":"Employee State Insurance"},['amount']) or 0
+            esi = frappe.db.get_value("Salary Detail",{'parent':ss.name,"salary_component":"ESI"},['amount']) or 0
             if esi:
                 total_esi+=esi
             row.append(esi or '-')
@@ -299,6 +305,10 @@ def get_data(args):
             if lwf:
                 total_lwf+=lwf
             row.append(lwf or '-')
+            insurance = frappe.db.get_value("Salary Detail",{'parent':ss.name,"salary_component":"Insurance"},['amount']) or 0
+            if insurance:
+                total_ins+=insurance
+            row.append(insurance or '-')
             sad = frappe.db.get_value("Salary Detail",{'parent':ss.name,"salary_component":"Salary Advance Deduction"},['amount']) or 0
             if sad:
                 total_salary_ded_ss+=sad
@@ -325,14 +335,18 @@ def get_data(args):
                 total_dhb+=ss.declared_holiday_bonus
             row.append(ss.declared_holiday_bonus or '')
             
-            row.append(ss.department)
+            # row.append(ss.department)
             
-            row.append(e.payroll_cost_center)
+            # row.append(e.payroll_cost_center)
             
-            row.append(ss.department)
+            # row.append(ss.department)
             data.append(row)
             indx +=1
     row1.append((indx-1))
+    row1.append('')
+    row1.append('')
+    row1.append('')
+    row1.append('')
     row1.append('')
     row1.append('')
     row1.append('')
@@ -369,6 +383,7 @@ def get_data(args):
     row1.append(total_esi)
     row1.append(total_it_ded)
     row1.append(total_lwf)
+    row1.append(total_ins)
     row1.append(total_salary_ded_ss)
     row1.append(total_ded)
     row1.append(total_ab)

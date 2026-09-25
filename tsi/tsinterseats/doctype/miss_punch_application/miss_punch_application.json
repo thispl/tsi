@@ -22,6 +22,7 @@
   "section_break_ytkb6",
   "approver_level_1",
   "approver_level_2",
+  "approver_level_3",
   "attendance_marked",
   "amended_from"
  ],
@@ -118,22 +119,34 @@
    "fieldtype": "Section Break"
   },
   {
+   "fetch_from": "employee.leave_approver",
+   "fetch_if_empty": 1,
    "fieldname": "approver_level_1",
    "fieldtype": "Link",
    "label": "Approver Level 1",
    "options": "User"
   },
   {
+   "fetch_from": "employee.level_approver_2",
+   "fetch_if_empty": 1,
    "fieldname": "approver_level_2",
    "fieldtype": "Link",
    "label": "Approver Level 2",
+   "options": "User"
+  },
+  {
+   "fetch_from": "employee.level_approver_3",
+   "fetch_if_empty": 1,
+   "fieldname": "approver_level_3",
+   "fieldtype": "Link",
+   "label": "Approver Level 3",
    "options": "User"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-03-01 15:01:14.781549",
+ "modified": "2024-10-25 17:38:56.746682",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "Miss Punch Application",

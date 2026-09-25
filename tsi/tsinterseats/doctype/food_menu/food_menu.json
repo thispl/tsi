@@ -58,7 +58,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-10-03 11:37:28.506375",
+ "modified": "2024-10-25 17:53:26.629233",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "Food Menu",
@@ -81,5 +81,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

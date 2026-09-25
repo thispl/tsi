@@ -10,6 +10,7 @@
  "field_order": [
   "employee",
   "employee_name",
+  "employee_category",
   "employee_user_id",
   "column_break_5fpkk",
   "department",
@@ -40,6 +41,7 @@
   "level_1",
   "column_break_hcxrb",
   "level_2",
+  "level_3",
   "amended_from"
  ],
  "fields": [
@@ -131,6 +133,7 @@
   },
   {
    "fetch_from": "employee.leave_approver",
+   "fetch_if_empty": 1,
    "fieldname": "level_1",
    "fieldtype": "Link",
    "label": "Level 1",
@@ -138,6 +141,7 @@
   },
   {
    "fetch_from": "employee.level_approver_2",
+   "fetch_if_empty": 1,
    "fieldname": "level_2",
    "fieldtype": "Link",
    "label": "Level 2",
@@ -238,12 +242,29 @@
    "fieldtype": "Time",
    "hidden": 1,
    "label": "In Time"
+  },
+  {
+   "fetch_from": "employee.employee_catagory",
+   "fetch_if_empty": 1,
+   "fieldname": "employee_category",
+   "fieldtype": "Link",
+   "label": "Employee Category",
+   "options": "Employee Catagory",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.level_approver_3",
+   "fetch_if_empty": 1,
+   "fieldname": "level_3",
+   "fieldtype": "Link",
+   "label": "Level 3",
+   "options": "User"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-11-16 19:29:41.237573",
+ "modified": "2024-10-25 17:38:57.098680",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "Late Entry",
@@ -265,5 +286,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

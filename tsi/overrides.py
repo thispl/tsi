@@ -6,7 +6,7 @@ from hrms.payroll.doctype.salary_slip.salary_slip import SalarySlip
 from hrms.hr.doctype.leave_application.leave_application import LeaveApplication
 from hrms.hr.doctype.attendance.attendance import Attendance
 from hrms.hr.utils import get_holidays_for_employee
-from tsi.mark_attendance import att_shift_status_employee
+from tsi.mark_attendance import att_shift_status_with_employee
 from datetime import datetime, timedelta
 from frappe.utils import cstr, add_days, date_diff,format_datetime,ceil,flt
 from frappe.utils import (getdate, cint, add_months, date_diff, add_days,nowdate, get_datetime_str, cstr, get_datetime, now_datetime, format_datetime, format_date,get_time)
@@ -15,6 +15,7 @@ from dateutil.relativedelta import relativedelta
 
 class CustomSalarySlip(SalarySlip):
     def get_date_details(self):
+        # sum of working hours is set as dh hours, when the employee works on NPD
         dh_hrs = frappe.db.sql("""
             SELECT * FROM `tabAttendance`
             WHERE attendance_date BETWEEN %s AND %s 
@@ -37,6 +38,11 @@ class CustomSalarySlip(SalarySlip):
         else:
             custom_dh_hours = integer_part
         self.dh_overtime_hours = custom_dh_hours
+        npd_amount=frappe.db.get_all("DH Approval",{'payroll_date_npd':('between',(self.start_date,self.end_date)),'employee':self.employee,'docstatus':1,'shift':('not in',['Gardner','HK','Lady Guard','SS-N','SEQ','SO'])},['*'])
+        npd_allow=0
+        for n in npd_amount:
+            npd_allow+=n.dh_allowance
+        self.dh_amount=npd_allow
         # holidays = get_holidays_for_employee(self.employee, self.start_date, self.end_date)
         # working_days = date_diff(self.end_date, self.start_date) + 1
         # working_days_list = [
@@ -57,6 +63,7 @@ class CustomSalarySlip(SalarySlip):
         dates = [add_days(start_date, i) for i in range(0, no_of_days)]
         att_count=0
         holidays=0
+        # att bonus is set when employee is present for all days
         for date in dates:
             holiday_list = frappe.db.get_value('Employee',{'name':self.employee},'holiday_list')
             holiday = frappe.db.sql("""select `tabHoliday`.holiday_date,`tabHoliday`.weekly_off, `tabHoliday`.others from `tabHoliday List` 
@@ -73,86 +80,90 @@ class CustomSalarySlip(SalarySlip):
         self.att_bonus=att_count + holidays
         self.holidays=holidays
         nsa=0
-        attendance=frappe.db.sql("select * from `tabAttendance` where employee=%s and attendance_date between %s and %s and shift in ('N','SS-N')",(self.employee,self.start_date,self.end_date),as_dict=True)
+        # count of night shift
+        attendance=frappe.db.sql("select * from `tabAttendance` where employee=%s and attendance_date between %s and %s and shift in ('N','SS-N','III')",(self.employee,self.start_date,self.end_date),as_dict=True)
         for att in attendance:
             if att.status=='Present':
                 nsa+=1
             elif att.status=='Half Day':
                 nsa+=0.5
         self.number_of_night_shift_attended=nsa
+        # ot hours is updated from the overtime request
         ot_hrs = frappe.db.sql("""
             SELECT SUM(ot_hours) AS ot_total 
             FROM `tabOvertime Request`
-            WHERE ot_date BETWEEN %s AND %s 
+            WHERE payroll_date BETWEEN %s AND %s 
             AND employee = %s 
             AND docstatus = 1
+            AND workflow_state = 'Approved'
         """, (self.start_date, self.end_date, self.employee), as_dict=True)
         if ot_hrs and len(ot_hrs) > 0:
             self.overtime_hours = ot_hrs[0].ot_total or 0
         else:
             self.overtime_hours = 0
 
-class CustomAttendance(Attendance):
-    def validate(self):
-        s_status = att_shift_status_employee(self.attendance_date, self.attendance_date, self.employee)
-        frappe.errprint(s_status)
-        self.shift_status = s_status
-        if self.status == 'On Leave':
-            frappe.errprint('s_status')
-            self.shift_status = s_status
-            self.in_time = ''
-            self.out_time = ''
-            self.shift = ''
-            self.total_working_hours = "00:00:00"
-            self.total_extra_hours = "00:00:00"
-            self.overtime_hours = "00:00:00"
-            self.early_exit_hours = "00:00:00"
-            self.late_entry_hours = "00:00:00"
-        if self.leave_application and self.status == 'Half Day':
-            frappe.errprint("hd1")
-            frappe.errprint(s_status)
-            self.shift_status = s_status
-            frappe.errprint(self.shift_status)
+# class CustomAttendance(Attendance):
+#     def validate(self):
+#         # method to update the shift status
+#         s_status = att_shift_status_with_employee(self.attendance_date, self.attendance_date, self.employee)
+#         frappe.errprint(s_status)
+#         self.shift_status = s_status
+#         if self.status == 'On Leave':
+#             frappe.errprint('s_status')
+#             self.shift_status = s_status
+#             self.in_time = ''
+#             self.out_time = ''
+#             self.shift = ''
+#             self.total_working_hours = "00:00:00"
+#             self.total_extra_hours = "00:00:00"
+#             self.overtime_hours = "00:00:00"
+#             self.early_exit_hours = "00:00:00"
+#             self.late_entry_hours = "00:00:00"
+#         if self.leave_application and self.status == 'Half Day':
+#             frappe.errprint("hd1")
+#             frappe.errprint(s_status)
+#             self.shift_status = s_status
+#             frappe.errprint(self.shift_status)
             
-    def after_insert(self):
-        status_map = {
-            "Present": "P",
-            "Absent": "A",
-            "Half Day": "HD",
-            "On Leave":"On Leave",
-            "Work From Home": "WFH",
-            "Holiday": "HH",
-            "Weekly Off": "WW",
-            "Leave Without Pay": "LOP",
-            "Casual Leave": "CL",
-            "Earned Leave": "EL",
-            "Sick Leave": "SL",
-            "ESI Leave": "ESI",
-            "Compensatory Off": "C-OFF",
-        }
-        s_status = att_shift_status_employee(self.attendance_date, self.attendance_date, self.employee)
-        if self.status == 'On Leave':
-            self.shift_status=s_status
-            self.in_time=''
-            self.out_time=''
-            self.shift=''
-            self.total_working_hours="00:00:00"
-            self.total_extra_hours="00:00:00"
-            self.total_overtime_hours="00:00:00"
-            self.early_exit_hours="00:00:00"
-            self.late_entry_hours="00:00:00"
-        if self.leave_application and self.status == 'Half Day':
-            if not self.in_time and not self.out_time:
-                status = status_map.get(self.leave_type, "")
-                self.shift_status=status
-                self.in_time=''
-                self.out_time=''
-                self.shift=''
-                self.total_working_hours="00:00:00"
-                self.total_extra_hours="00:00:00"
-                self.total_overtime_hours="00:00:00"
-                self.early_exit_hours="00:00:00"
-                self.late_entry_hours="00:00:00"
+#     def after_insert(self):
+#         # method to in time and out time empty when leave application is there
+#         status_map = {
+#             "Present": "P",
+#             "Absent": "A",
+#             "Half Day": "HD",
+#             "On Leave":"On Leave",
+#             "Work From Home": "WFH",
+#             "Holiday": "HH",
+#             "Weekly Off": "WW",
+#             "Leave Without Pay": "LOP",
+#             "Casual Leave": "CL",
+#             "Earned Leave": "EL",
+#             "Sick Leave": "SL",
+#             "ESI Leave": "ESI",
+#             "Compensatory Off": "C-OFF",
+#         }
+#         s_status = att_shift_status_with_employee(self.attendance_date, self.attendance_date, self.employee)
+#         if self.status == 'On Leave':
+#             self.shift_status=s_status
+#             self.in_time=''
+#             self.out_time=''
+#             self.shift=''
+#             self.total_working_hours="00:00:00"
+#             self.total_extra_hours="00:00:00"
+#             self.total_overtime_hours="00:00:00"
+#             self.early_exit_hours="00:00:00"
+#             self.late_entry_hours="00:00:00"
+#         if self.leave_application and self.status == 'Half Day':
+#             if not self.in_time and not self.out_time:
+#                 self.shift_status=s_status
+#                 self.in_time=''
+#                 self.out_time=''
+#                 self.shift=''
+#                 self.total_working_hours="00:00:00"
+#                 self.total_extra_hours="00:00:00"
+#                 self.total_overtime_hours="00:00:00"
+#                 self.early_exit_hours="00:00:00"
+#                 self.late_entry_hours="00:00:00"
 
            
 

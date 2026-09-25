@@ -6,14 +6,8 @@ from frappe import _
 from frappe.model.document import Document
 
 class DHApproval(Document):
-    
     def validate(self):
-        if self.docstatus == 1:  # Check if the document is submitted
-            # Fetch Holiday List
-            holiday_list_name = "Holiday - TSI"
-            hl = frappe.get_doc("Holiday List", holiday_list_name)
-            
-            if not hl:
-                frappe.throw(_("Holiday List '{0}' not found").format(holiday_list_name))
+        if frappe.db.exists("DH Approval",{'dh_date':self.dh_date,'employee':self.employee,'docstatus':['!=',2],'name':['!=',self.name]}):
+           frappe.throw(_("Already another document found on this date"))
 
            

@@ -9,12 +9,12 @@
  "filters": [],
  "idx": 0,
  "is_standard": "Yes",
- "modified": "2023-11-23 12:56:29.333341",
+ "modified": "2024-10-19 11:44:39.329535",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "Monthly In Out Report",
  "owner": "Administrator",
- "prepared_report": 0,
+ "prepared_report": 1,
  "ref_doctype": "Attendance",
  "report_name": "Monthly In Out Report",
  "report_type": "Script Report",
@@ -30,6 +30,9 @@
   },
   {
    "role": "HOD"
+  },
+  {
+   "role": "Employee"
   }
  ]
 }

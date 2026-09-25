@@ -82,5 +82,40 @@ frappe.ui.form.on('Attendance Settings', {
 				}
 			})
 		}
+	},
+	submit_attendance(frm){
+		if (frm.doc.employee){
+			frappe.call({
+				"method": "tsi.mark_attendance.att_draft_to_submit_with_employee",
+				"args": {
+					"from_date": frm.doc.from_date,
+					"to_date": frm.doc.to_date,
+					"employee": frm.doc.employee
+				},
+				freeze: true,
+				freeze_message: "Submitting...",
+				callback(r){
+					if(r.message == 'ok'){
+						frappe.msgprint("Attendance Submitted Successfully")
+					}
+				}
+			})
+		}
+		else{
+			frappe.call({
+				"method": "tsi.mark_attendance.att_draft_to_submit_without_employee",
+				"args": {
+					"from_date": frm.doc.from_date,
+					"to_date": frm.doc.to_date
+				},
+				freeze: true,
+				freeze_message: "Submitting...",
+				callback(r){
+					if(r.message == "ok"){
+						frappe.msgprint("Attendance Submitted Successfully")
+					}
+				}
+			})
+		}
 	}
 });

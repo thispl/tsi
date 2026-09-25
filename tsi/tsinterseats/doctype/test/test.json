@@ -20,7 +20,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2024-04-30 13:32:45.749913",
+ "modified": "2024-10-25 17:53:25.768501",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "TEST",
@@ -41,5 +41,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

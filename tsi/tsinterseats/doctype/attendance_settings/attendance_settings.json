@@ -12,7 +12,8 @@
   "column_break_xk2ry",
   "to_date",
   "process_checkins",
-  "process_attendance"
+  "process_attendance",
+  "submit_attendance"
  ],
  "fields": [
   {
@@ -44,13 +45,18 @@
    "fieldname": "process_attendance",
    "fieldtype": "Button",
    "label": "Process Attendance"
+  },
+  {
+   "fieldname": "submit_attendance",
+   "fieldtype": "Button",
+   "label": "Submit Attendance"
   }
  ],
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-10-31 19:58:50.053024",
+ "modified": "2024-12-06 13:02:53.918641",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "Attendance Settings",

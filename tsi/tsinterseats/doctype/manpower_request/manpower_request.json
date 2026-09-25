@@ -102,7 +102,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-08-14 10:55:21.810709",
+ "modified": "2024-10-25 17:53:26.721309",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "Manpower Request",
@@ -124,5 +124,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

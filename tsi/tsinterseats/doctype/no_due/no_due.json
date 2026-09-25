@@ -9,6 +9,7 @@
  "field_order": [
   "employee",
   "employee_name",
+  "employee_category",
   "column_break_3",
   "designation",
   "department",
@@ -101,12 +102,21 @@
    "options": "No Due",
    "print_hide": 1,
    "read_only": 1
+  },
+  {
+   "fetch_from": "employee.employee_catagory",
+   "fetch_if_empty": 1,
+   "fieldname": "employee_category",
+   "fieldtype": "Link",
+   "label": "Employee Category",
+   "options": "Employee Catagory",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2023-07-24 14:58:02.109493",
+ "modified": "2024-10-25 17:38:57.369449",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "No Due",

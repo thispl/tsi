@@ -1,0 +1,207 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "ATR.####",
+ "creation": "2025-08-01 15:30:36.252927",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "ot_applicable",
+  "employee_type",
+  "column_break_hldla",
+  "attendance_date",
+  "attendance_details_section",
+  "attendance_shift",
+  "first_in_time",
+  "last_out_time",
+  "extra_time",
+  "column_break_wxlpd",
+  "shift",
+  "in_time",
+  "out_time",
+  "over_time",
+  "column_break_9g6mo",
+  "corrected_shift",
+  "corrected_in",
+  "corrected_out",
+  "corrected_ot",
+  "section_break_7qoit",
+  "attendance_marked",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Attendance Regularize",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "employee_type",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Employment Type",
+   "options": "Employment Type"
+  },
+  {
+   "fieldname": "attendance_date",
+   "fieldtype": "Date",
+   "label": "Attendance Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_hldla",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.attendance_date",
+   "fieldname": "attendance_details_section",
+   "fieldtype": "Section Break",
+   "label": "Attendance Details"
+  },
+  {
+   "fieldname": "attendance_shift",
+   "fieldtype": "Data",
+   "label": "Attendance Shift"
+  },
+  {
+   "fieldname": "first_in_time",
+   "fieldtype": "Data",
+   "label": "First In Time"
+  },
+  {
+   "fieldname": "last_out_time",
+   "fieldtype": "Data",
+   "label": "Last Out Time"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "extra_time",
+   "fieldtype": "Time",
+   "label": "OT Hours"
+  },
+  {
+   "fieldname": "column_break_wxlpd",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "shift",
+   "fieldtype": "Check",
+   "label": "Shift"
+  },
+  {
+   "default": "0",
+   "fieldname": "in_time",
+   "fieldtype": "Check",
+   "label": "In Time"
+  },
+  {
+   "default": "0",
+   "fieldname": "out_time",
+   "fieldtype": "Check",
+   "label": "Out Time"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:doc.ot_applicable==1",
+   "fieldname": "over_time",
+   "fieldtype": "Check",
+   "label": "OT"
+  },
+  {
+   "default": "0",
+   "fetch_from": "employee.ot_applicable",
+   "fetch_if_empty": 1,
+   "fieldname": "ot_applicable",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "OT Applicable"
+  },
+  {
+   "fieldname": "corrected_shift",
+   "fieldtype": "Link",
+   "label": "Corrected Shift",
+   "options": "Shift Type"
+  },
+  {
+   "depends_on": "eval:doc.in_time == 1",
+   "fieldname": "corrected_in",
+   "fieldtype": "Datetime",
+   "label": "Corrected In",
+   "mandatory_depends_on": "eval:doc.in_time == 1"
+  },
+  {
+   "fieldname": "column_break_9g6mo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.out_time == 1",
+   "fieldname": "corrected_out",
+   "fieldtype": "Datetime",
+   "label": "Corrected Out",
+   "mandatory_depends_on": "eval:doc.out_time == 1"
+  },
+  {
+   "depends_on": "eval:doc.over_time == 1",
+   "fieldname": "corrected_ot",
+   "fieldtype": "Time",
+   "label": "Corrected OT",
+   "mandatory_depends_on": "eval:doc.over_time == 1"
+  },
+  {
+   "fieldname": "section_break_7qoit",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "attendance_marked",
+   "fieldtype": "Data",
+   "label": "Attendance Marked"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-07-28 18:16:09.087600",
+ "modified_by": "Administrator",
+ "module": "tsinterseats",
+ "name": "Attendance Regularize",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1,
+ "track_seen": 1,
+ "track_views": 1
+}

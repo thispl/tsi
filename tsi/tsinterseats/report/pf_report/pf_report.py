@@ -36,7 +36,7 @@ def get_data(filters):
 		dep= ss.department
 		ac = ss.bank_account_no
 		sal = ss.gross_pay
-		pf = frappe.get_value('Salary Detail',{'salary_component':"Provident Fund",'parent':ss.name},["amount"] or 0)
+		pf = frappe.get_value('Salary Detail',{'salary_component':"PF",'parent':ss.name},["amount"] or 0)
 		row = [i,emp_id or "-",emp_name or "-",dep or "-",ac or "-",sal or 0,pf or 0]
 		data.append(row)
 		i+=1

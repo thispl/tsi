@@ -12,12 +12,21 @@
   "employee_name",
   "department",
   "designation",
+  "employee_category",
+  "_cost_center",
   "column_break_crydu",
+  "ot_from_od",
+  "payroll_date",
   "ot_date",
   "attendance",
   "shift",
   "from_time",
   "to_time",
+  "od_date",
+  "on_duty_application",
+  "session_from_time",
+  "session_to_time",
+  "ot_hour",
   "section_break_mmqxi",
   "biometric_checkin",
   "biometric_checkinout",
@@ -25,9 +34,12 @@
   "column_break_fiwa6",
   "ot_applicable",
   "ot_hours",
+  "amended_from",
+  "section_break_slha8",
   "ot_level_1_approver",
   "ot_level_2_approver",
-  "amended_from"
+  "column_break_koodp",
+  "ot_level_3_approver"
  ],
  "fields": [
   {
@@ -56,6 +68,7 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fetch_from": "employee.designation",
    "fieldname": "designation",
    "fieldtype": "Link",
@@ -70,11 +83,12 @@
   },
   {
    "allow_on_submit": 1,
-   "depends_on": "eval:doc.employee",
+   "depends_on": "eval:doc.employee && doc.ot_from_od == 0",
    "fieldname": "ot_date",
    "fieldtype": "Date",
    "in_standard_filter": 1,
    "label": "OT Date",
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -118,7 +132,7 @@
    "fieldname": "ot_hours",
    "fieldtype": "Float",
    "label": "OT Hours",
-   "read_only": 1
+   "permlevel": 1
   },
   {
    "fieldname": "amended_from",
@@ -130,6 +144,7 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "default": "0",
    "fetch_from": "employee.ot_applicable",
    "fieldname": "ot_applicable",
@@ -145,6 +160,8 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.ot_from_od == 0",
    "fieldname": "shift",
    "fieldtype": "Link",
    "in_standard_filter": 1,
@@ -152,28 +169,121 @@
    "options": "Shift Type"
   },
   {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.ot_from_od == 0",
    "fieldname": "attendance",
    "fieldtype": "Link",
    "label": "Attendance",
    "options": "Attendance"
   },
   {
+   "allow_on_submit": 1,
+   "fetch_from": "employee.leave_approver",
+   "fetch_if_empty": 1,
    "fieldname": "ot_level_1_approver",
    "fieldtype": "Link",
    "label": "OT Level 1 Approver",
    "options": "User"
   },
   {
+   "allow_on_submit": 1,
+   "fetch_from": "employee.level_approver_2",
+   "fetch_if_empty": 1,
    "fieldname": "ot_level_2_approver",
    "fieldtype": "Link",
    "label": "OT Level 2 Approver",
    "options": "User"
+  },
+  {
+   "fetch_from": "employee.employee_catagory",
+   "fetch_if_empty": 1,
+   "fieldname": "employee_category",
+   "fieldtype": "Link",
+   "label": "Employee Category",
+   "options": "Employee Catagory",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fetch_from": "employee.level_approver_3",
+   "fetch_if_empty": 1,
+   "fieldname": "ot_level_3_approver",
+   "fieldtype": "Link",
+   "label": "OT Level 3 Approver",
+   "options": "User"
+  },
+  {
+   "default": "0",
+   "depends_on": "eval:frappe.user.has_role(\"HR User\")",
+   "fieldname": "ot_from_od",
+   "fieldtype": "Check",
+   "label": "OT From OD"
+  },
+  {
+   "depends_on": "eval:doc.ot_from_od == 1",
+   "fieldname": "od_date",
+   "fieldtype": "Date",
+   "label": "OD Date"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.ot_from_od == 1",
+   "fieldname": "session_from_time",
+   "fieldtype": "Time",
+   "label": "Session From Time",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.ot_from_od == 1",
+   "fieldname": "session_to_time",
+   "fieldtype": "Time",
+   "label": "Session To Time",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.ot_from_od == 1",
+   "fieldname": "ot_hour",
+   "fieldtype": "Float",
+   "label": "OT Hour"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.ot_from_od == 1",
+   "fieldname": "on_duty_application",
+   "fieldtype": "Link",
+   "label": "On Duty Application",
+   "mandatory_depends_on": "eval:doc.ot_from_od == 1",
+   "options": "On Duty Application",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_slha8",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_koodp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "payroll_date",
+   "fieldtype": "Date",
+   "label": "Payroll Date"
+  },
+  {
+   "fetch_from": "employee.payroll_cost_center",
+   "fetch_if_empty": 1,
+   "fieldname": "_cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-08-27 13:41:45.364749",
+ "modified": "2026-03-11 17:07:30.837324",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "Overtime Request",
@@ -195,5 +305,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

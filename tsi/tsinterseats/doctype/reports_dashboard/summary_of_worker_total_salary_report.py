@@ -133,11 +133,11 @@ def data1(args):
 		gross = frappe.db.sql("""select sum(`tabSalary Slip`.gross_pay) as gross from `tabSalary Slip`
 		where `tabSalary Slip`.salary_structure = 'Worker'and `tabSalary Slip`.start_date ='%s' and `tabSalary Slip`.end_date = '%s' """%(args.from_date,args.to_date),as_dict=True)[0].gross or 0
 		pf = frappe.db.sql("""select sum(`tabSalary Detail`.amount) as pf from `tabSalary Slip`
-			left join `tabSalary Detail` on `tabSalary Slip`.name = `tabSalary Detail`.parent where `tabSalary Slip`.salary_structure = 'Worker' and `tabSalary Detail`.salary_component = 'Provident Fund' and `tabSalary Slip`.start_date ='%s' and `tabSalary Slip`.end_date = '%s' """%(args.start_date,args.end_date),as_dict=True)[0].pf or 0
+			left join `tabSalary Detail` on `tabSalary Slip`.name = `tabSalary Detail`.parent where `tabSalary Slip`.salary_structure = 'Worker' and `tabSalary Detail`.salary_component = 'PF' and `tabSalary Slip`.start_date ='%s' and `tabSalary Slip`.end_date = '%s' """%(args.start_date,args.end_date),as_dict=True)[0].pf or 0
 		pt = frappe.db.sql("""select sum(`tabSalary Detail`.amount) as pt from `tabSalary Slip`
 			left join `tabSalary Detail` on `tabSalary Slip`.name = `tabSalary Detail`.parent where `tabSalary Slip`.salary_structure = 'Worker' and `tabSalary Detail`.salary_component = 'Professional Tax' and `tabSalary Slip`.start_date ='%s' and `tabSalary Slip`.end_date = '%s' """%(args.start_date,args.end_date),as_dict=True)[0].pt or 0
 		esi = frappe.db.sql("""select sum(`tabSalary Detail`.amount) as esi from `tabSalary Slip`
-			left join `tabSalary Detail` on `tabSalary Slip`.name = `tabSalary Detail`.parent where `tabSalary Slip`.salary_structure = 'Worker' and `tabSalary Detail`.salary_component = 'Employee State Insurance' and `tabSalary Slip`.start_date ='%s' and `tabSalary Slip`.end_date = '%s' """%(args.start_date,args.end_date),as_dict=True)[0].esi
+			left join `tabSalary Detail` on `tabSalary Slip`.name = `tabSalary Detail`.parent where `tabSalary Slip`.salary_structure = 'Worker' and `tabSalary Detail`.salary_component = 'ESI' and `tabSalary Slip`.start_date ='%s' and `tabSalary Slip`.end_date = '%s' """%(args.start_date,args.end_date),as_dict=True)[0].esi
 		lwf = frappe.db.sql("""select sum(`tabSalary Detail`.amount) as lwf from `tabSalary Slip`
 			left join `tabSalary Detail` on `tabSalary Slip`.name = `tabSalary Detail`.parent where `tabSalary Slip`.salary_structure = 'Worker' and `tabSalary Detail`.salary_component = 'LWF' and `tabSalary Slip`.start_date ='%s' and `tabSalary Slip`.end_date = '%s' """%(args.start_date,args.end_date),as_dict=True)[0].lwf or 0
 		sd = frappe.db.sql("""select sum(`tabSalary Detail`.amount) as sd from `tabSalary Slip`

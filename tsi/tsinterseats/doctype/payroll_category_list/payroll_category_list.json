@@ -21,7 +21,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-11-20 12:06:39.194883",
+ "modified": "2024-10-25 17:53:26.257569",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "Payroll Category List",
@@ -44,5 +44,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

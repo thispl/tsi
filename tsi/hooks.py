@@ -52,9 +52,9 @@ app_license = "MIT"
 # website_generators = ["Web Page"]
 jinja = {
 	"methods": [
-		"tsi.custom.salary_details",
-		"tsi.custom.monthly_in_out",
-        "tsi.custom.leave_days_count"
+		"tsi.job_app_custom.salary_details",
+		"tsi.monthly_in_ot_custom.monthly_in_out",
+        "tsi.leave_custom.leave_days_count"
 	]
 }
 # fixtures = ["Client Script","Print Format","Report","Workspace"]
@@ -107,7 +107,7 @@ jinja = {
 
 override_doctype_class = {
 	"Salary Slip": "tsi.overrides.CustomSalarySlip",
-    "Attendance" : "tsi.overrides.CustomAttendance",
+    # "Attendance" : "tsi.overrides.CustomAttendance",
     # "Leave Application" : "tsi.overrides.CustomLeaveApplication",
 }
 
@@ -147,8 +147,11 @@ scheduler_events = {
 			'tsi.mark_attendance.mark_att_process'
 		],
 		"30 00 * * *" :[
-			'tsi.custom.update_relieving_date'
-		]
+			'tsi.employee_custom.update_relieving_date'
+		],
+        "*/10 * * * *" :[
+			'tsi.mark_attendance.mark_canteen_coupons'
+		],
 	}
 }
 
@@ -222,24 +225,40 @@ scheduler_events = {
 # ]
 doc_events = {
 	'Full and Final Statement': {
-		'before_submit': 'tsi.custom.update_mis_status_on_submit'
+		'before_submit': 'tsi.F_and_F_custom.update_mis_status_on_submit'
 	},
 	# 'Leave Application': {
 	# 	'validate': ['tsi.custom.validate_leave_dates' , 'tsi.custom.validate_leave_type_and_half_day','tsi.custom.validate_earn_leave','tsi.custom.validate_casual_leave','tsi.custom.validate_combined_leave']
 	# },   
 	'Employee Checkin':{
-		'on_update': 'tsi.custom.update_att'
+		'on_update': 'tsi.checkin_custom.update_att'
 	},
 	# "Attendance":
 	# {
 	# 	'on_update': ['tsi.mark_attendance.update_att','tsi.mark_attendance.mark_wh_ot_on_update']
 	# },
-	"Employee":{
-		"validate": "tsi.custom.inactive_employee"
+	# 
+    "Attendance":{
+		'before_insert': ['tsi.tsinterseats.doctype.early_out.early_out.early']
+	},
+    "Employee":{
+		"validate": "tsi.employee_custom.inactive_employee"
 	},
     "Leave Application": {
-		"after_insert": ["tsi.custom.get_casual_leaves","tsi.custom.cl_el_restriction"]
-	}
+		"after_insert": ["tsi.leave_custom.get_casual_leaves","tsi.leave_custom.cl_el_restriction","tsi.leave_custom.el_restriction"]
+	},
+    'Scheduled Job Log':{
+       "validate":"tsi.schedule_custom.schedule_log_fail" 
+	},
+	"Overtime Request": {
+        "before_save": "tsi.ot_custom.validate_overtime_reason_before_submit"
+        
+    },
+    "DH Approval": {
+        "before_save": "tsi.dh_custom.validate_dh_reason_before_submit"
+        
+    }
+    
     # "On Duty Application":{
 	# 	"validate": "tsi.custom.restrict_od"
 	# },

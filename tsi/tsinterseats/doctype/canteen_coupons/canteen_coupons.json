@@ -11,6 +11,7 @@
   "employee_details_section",
   "employee",
   "employee_name",
+  "employee_category",
   "date",
   "attendance",
   "column_break_hveaw",
@@ -83,16 +84,26 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "attendance",
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Attendance ",
    "options": "Attendance"
+  },
+  {
+   "fetch_from": "employee.employee_catagory",
+   "fetch_if_empty": 1,
+   "fieldname": "employee_category",
+   "fieldtype": "Link",
+   "label": "Employee Category",
+   "options": "Employee Catagory",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-12-14 11:44:59.234748",
+ "modified": "2024-12-26 16:26:31.614457",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "Canteen Coupons",
@@ -114,5 +125,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

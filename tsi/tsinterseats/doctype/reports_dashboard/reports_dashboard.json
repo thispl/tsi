@@ -43,7 +43,7 @@
    "fieldname": "reports",
    "fieldtype": "Select",
    "label": "Reports",
-   "options": "\nSalary Summary Register\nAttendance Register\nMonthly In/Out Report\nMonthly IN OUT Report-PDF\nSalary Summary Report\nSummary Of Worker Salary Report\nSummary Of Factory Staff Salary Report\nSummary of Administration Staff Salary Report\nSummary Of Worker Total Salary Report\nSummary Of Production Total Salary Report\nSummary Of Staff Salary Report\nPF Excel Report\nPF Text File Report\nMonthly TDS Report\nESI Excel Report\nSummary of PF Contribution Report\nSummary of ESI Deduction Report\nSummary of Labour Welfare Fund deduction Report\nSummary of PT Deduction Report\nSummary for Journal Voucher\nWorkers Salary - Allocation to Cost Center Report\nStaff Salary - Allocation to Cost Center Report\nBulk Salary Slip Report"
+   "options": "\nSalary Summary Register\nAttendance Register\nMonthly In/Out Report\nMonthly IN OUT Report-PDF\nSalary Summary Report\nSummary Of Worker Salary Report\nSummary Of Factory Staff Salary Report\nSummary of Administration Staff Salary Report\nSummary Of Worker Total Salary Report\nSummary Of Production Total Salary Report\nSummary Of Staff Salary Report\nPF Excel Report\nPF Text File Report\nMonthly TDS Report\nESI Excel Report\nSummary of PF Contribution Report\nSummary of ESI Deduction Report\nSummary of Labour Welfare Fund deduction Report\nSummary of PT Deduction Report\nSummary for Journal Voucher\nWorkers Salary - Allocation to Cost Center Report\nStaff Salary - Allocation to Cost Center Report\nBulk Salary Slip Report\nStaff Salary Register\nWorker Salary Register\nMonthly Salary Register"
   },
   {
    "depends_on": "eval:doc.reports!=\"Monthly IN OUT Report-PDF\"",
@@ -101,7 +101,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2023-12-20 12:23:13.848667",
+ "modified": "2026-01-05 16:04:10.917821",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "Reports Dashboard",

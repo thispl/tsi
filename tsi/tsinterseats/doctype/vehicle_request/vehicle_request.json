@@ -1,0 +1,326 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "VR-.#####",
+ "creation": "2024-12-18 17:01:12.324119",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "employee",
+  "employee_name",
+  "department",
+  "employee_catagory",
+  "column_break_pw3gt",
+  "designation",
+  "company_name",
+  "od_name_id",
+  "od_date",
+  "section_break_y3rvx",
+  "section_break_vjotp",
+  "shift",
+  "session",
+  "column_break_b977i",
+  "from_time",
+  "to_time",
+  "flexible_from_time",
+  "flexible_to_time",
+  "section_break_rnfru",
+  "vehicle",
+  "from_place",
+  "to_place",
+  "required_date",
+  "no_of_person",
+  "column_break_bxprv",
+  "to_be_filled_by_security_department",
+  "vehicle_number",
+  "opening_time_km",
+  "closing_time_km",
+  "nature_of_duty",
+  "start_time",
+  "end_time",
+  "approvers_section",
+  "level_approver_1",
+  "level_approver_2",
+  "level_approver_3",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "vehicle",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Vehicle",
+   "options": "Vehicle"
+  },
+  {
+   "fieldname": "from_place",
+   "fieldtype": "Data",
+   "label": "From Place"
+  },
+  {
+   "fieldname": "to_place",
+   "fieldtype": "Data",
+   "label": "To Place"
+  },
+  {
+   "fieldname": "required_date",
+   "fieldtype": "Date",
+   "label": "Required Date"
+  },
+  {
+   "fieldname": "no_of_person",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "No of Person"
+  },
+  {
+   "fieldname": "column_break_bxprv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "to_be_filled_by_security_department",
+   "fieldtype": "Data",
+   "label": "To be filled by Security Department"
+  },
+  {
+   "fieldname": "vehicle_number",
+   "fieldtype": "Data",
+   "label": "Vehicle Number"
+  },
+  {
+   "fieldname": "opening_time_km",
+   "fieldtype": "Data",
+   "label": "Opening Time KM"
+  },
+  {
+   "fieldname": "closing_time_km",
+   "fieldtype": "Data",
+   "label": "Closing Time KM"
+  },
+  {
+   "fieldname": "nature_of_duty",
+   "fieldtype": "Data",
+   "label": " Nature of Duty"
+  },
+  {
+   "fieldname": "start_time",
+   "fieldtype": "Time",
+   "label": "Start Time"
+  },
+  {
+   "fieldname": "end_time",
+   "fieldtype": "Time",
+   "label": "End Time"
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fetch_if_empty": 1,
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.department",
+   "fetch_if_empty": 1,
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.employee_catagory",
+   "fetch_if_empty": 1,
+   "fieldname": "employee_catagory",
+   "fieldtype": "Link",
+   "label": "Employee Catagory",
+   "options": "Employee Catagory",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pw3gt",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "employee.designation",
+   "fetch_if_empty": 1,
+   "fieldname": "designation",
+   "fieldtype": "Link",
+   "label": "Designation",
+   "options": "Designation",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "employee.company",
+   "fetch_if_empty": 1,
+   "fieldname": "company_name",
+   "fieldtype": "Data",
+   "label": "Company Name",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "od_name_id.od_date",
+   "fetch_if_empty": 1,
+   "fieldname": "od_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "OD Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_y3rvx",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fetch_from": "od_name_id.shift",
+   "fetch_if_empty": 1,
+   "fieldname": "shift",
+   "fieldtype": "Link",
+   "label": "Shift",
+   "mandatory_depends_on": "eval:doc.session == 'Full day' || doc.session == 'First Half' || doc.session == 'Second Half'",
+   "options": "Shift Type",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "od_name_id.session",
+   "fetch_if_empty": 1,
+   "fieldname": "session",
+   "fieldtype": "Select",
+   "label": "Session",
+   "options": "\nFull day\nFirst Half\nSecond Half\nFlexible",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_b977i",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "od_name_id.from_time",
+   "fetch_if_empty": 1,
+   "fieldname": "from_time",
+   "fieldtype": "Time",
+   "label": " From Time",
+   "mandatory_depends_on": "eval:doc.session == 'Full day' || doc.session == 'First Half' || doc.session == 'Second Half'",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_rnfru",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fetch_from": "od_name_id.to_time",
+   "fetch_if_empty": 1,
+   "fieldname": "to_time",
+   "fieldtype": "Time",
+   "label": "To Time",
+   "mandatory_depends_on": "eval:doc.session == 'Full day' || doc.session == 'First Half' || doc.session == 'Second Half'",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.session == 'Flexible'",
+   "fetch_from": "od_name_id.flexible_time",
+   "fetch_if_empty": 1,
+   "fieldname": "flexible_from_time",
+   "fieldtype": "Time",
+   "label": "Flexible From Time",
+   "mandatory_depends_on": "eval:doc.session == 'Flexible'",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "od_name_id.flexible_to_time",
+   "fetch_if_empty": 1,
+   "fieldname": "flexible_to_time",
+   "fieldtype": "Time",
+   "label": "Flexible To Time",
+   "mandatory_depends_on": "eval:doc.session == 'Flexible'",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_vjotp",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Vehicle Request",
+   "print_hide": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "od_name_id",
+   "fieldtype": "Link",
+   "label": "On Duty",
+   "options": "On Duty Application"
+  },
+  {
+   "fieldname": "approvers_section",
+   "fieldtype": "Section Break",
+   "label": "Approvers"
+  },
+  {
+   "fetch_from": "employee.leave_approver",
+   "fetch_if_empty": 1,
+   "fieldname": "level_approver_1",
+   "fieldtype": "Link",
+   "label": "Level Approver 1",
+   "options": "User"
+  },
+  {
+   "fetch_from": "employee.level_approver_2",
+   "fetch_if_empty": 1,
+   "fieldname": "level_approver_2",
+   "fieldtype": "Link",
+   "label": "Level Approver 2",
+   "options": "User"
+  },
+  {
+   "fetch_from": "employee.level_approver_3",
+   "fetch_if_empty": 1,
+   "fieldname": "level_approver_3",
+   "fieldtype": "Link",
+   "label": "Level Approver 3",
+   "options": "User"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2024-12-24 19:06:52.760467",
+ "modified_by": "Administrator",
+ "module": "tsinterseats",
+ "name": "Vehicle Request",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

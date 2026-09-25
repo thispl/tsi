@@ -171,6 +171,40 @@ frappe.ui.form.on('Reports Dashboard', {
 			})
 			
 		}
+		if(frm.doc.reports == 'Staff Salary Register'){
+			frappe.call({
+				method : 'tsi.tsinterseats.doctype.reports_dashboard.staff_salary_register.download',
+				args : {
+					start_date : frm.doc.start_date,
+					end_date : frm.doc.end_date,
+					department: frm.doc.department,
+					category : frm.doc.category
+				}
+			})
+		}
+		if(frm.doc.reports == 'Worker Salary Register'){
+			frappe.call({
+				method : 'tsi.tsinterseats.doctype.reports_dashboard.worker_salary_register.download',
+				args : {
+					start_date : frm.doc.start_date,
+					end_date : frm.doc.end_date,
+					department: frm.doc.department,
+					category : frm.doc.category
+				}
+			})
+		}
+		if(frm.doc.reports == 'Monthly Salary Register'){
+			frappe.call({
+				method : 'tsi.tsinterseats.doctype.reports_dashboard.monthly_salary_register.download',
+				args : {
+					start_date : frm.doc.start_date,
+					end_date : frm.doc.end_date,
+					department: frm.doc.department,
+					category : frm.doc.category
+				}
+			})
+		}
+
 		// var path = "tsi.tsinterseats.doctype.reports_dashboard.attendance_register.download"
 		// var args = 'start_date=%(start_date)s&end_date=%(end_date)s&department=%(department)s'
 		// if(path){

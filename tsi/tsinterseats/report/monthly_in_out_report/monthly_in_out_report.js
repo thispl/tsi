@@ -3,6 +3,24 @@
 /* eslint-disable */
 
 frappe.query_reports["Monthly In Out Report"] = {
+	// onload: function(report) {
+    //     if (!frappe.user.has_role("HR Manager")) {
+    //         let current_user = frappe.session.user;
+
+            // Fetch employee details based on the user
+            // frappe.call({
+            //     method: "tsi.tsinterseats.report.monthly_in_out_report.monthly_in_out_report.get_emp_id",
+            //     args: { user_id: current_user },
+            //     callback: function(r) {
+            //         if (r.message) {
+			// 				report.set_filter_value('employee', r.message);
+			// 				report.set_filter_property('employee', 'read_only', true);
+							
+            //         }
+			// 	}
+            // });
+        // }
+    // },
 	"filters": [
 		{
 			"fieldname": "from_date",
@@ -36,13 +54,18 @@ frappe.query_reports["Monthly In Out Report"] = {
 			"label": __("Employee"),
 			"fieldtype": "Link",
 			"options": "Employee",
+			// "reqd": frappe.user.has_role("HR Manager") ? 0 : 1,
+			"read_only": frappe.user.has_role("HR Manager") || frappe.user.has_role("HOD") ? 0 : 1,
+			
 		},
+		
 		{
 			"fieldname": "employee_catagory",
 			"label": __("Employee Catagory"),
 			"fieldtype": "Link",
 			"options": "Employee Catagory",
-			"default":""
+			// "default":"",
+			"read_only": frappe.user.has_role("HR Manager") ? 0 : 1,
 		},
 		
 	]

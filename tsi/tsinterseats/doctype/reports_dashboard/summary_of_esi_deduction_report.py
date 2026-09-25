@@ -133,7 +133,7 @@ def data1(args):
                 `tabSalary Slip`.end_date <= '{args.end_date}'
         """, as_dict=True)[0].gross or 0
         frappe.log_error(gross)
-        peesi = get_salary_component_total('Employee State Insurance')
+        peesi = get_salary_component_total('ESI')
         # if peesi == 0:
         #     plresi=0
         # else:

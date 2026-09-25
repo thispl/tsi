@@ -4,8 +4,10 @@ from frappe.utils import time_diff
 from datetime import datetime
 from datetime import timedelta
 import pdfkit
+from frappe.utils import getdate
+from datetime import date
 from frappe.utils.data import get_datetime
-
+from tsi.mark_attendance import att_shift_status_with_employee
 from frappe import throw,_
 from frappe.utils import (
     add_days,
@@ -20,6 +22,9 @@ from frappe.utils import (
     rounded,
     today,
 )
+from frappe.utils import time_diff
+from dateutil.relativedelta import relativedelta
+from datetime import datetime
 from frappe.utils import get_first_day, get_last_day, format_datetime,get_url_to_form,today
 from frappe.utils.data import ceil, get_time, get_year_start
 import json
@@ -43,25 +48,25 @@ import re
 
 @frappe.whitelist()
 def cron_job1():
-    job = frappe.db.exists('Scheduled Job Type', 'mark_att')
-    if not job:
-        sjt = frappe.new_doc("Scheduled Job Type")  
-        sjt.update({
-            "method" : 'tsi.mark_attendance.mark_att_process',
-            "frequency" : 'Cron',
-            "cron_format" : '*/10 * * * *'
-        })
-        sjt.save(ignore_permissions=True)
+	job = frappe.db.exists('Scheduled Job Type', 'update_relieving_date')
+	if not job:
+		sjt = frappe.new_doc("Scheduled Job Type")  
+		sjt.update({
+			"method" : 'tsi.employee_custom.update_relieving_date',
+			"frequency" : 'Cron',
+			"cron_format" : '30 00 * * *'
+		})
+		sjt.save(ignore_permissions=True)
 
-@frappe.whitelist()
-def update_mis_status_on_submit(doc, method):
-    # Get the employee's name from the Full and Final Statement record
-    employee = doc.employee
+# @frappe.whitelist()
+# def update_mis_status_on_submit(doc, method):
+#     # Get the employee's name from the Full and Final Statement record
+#     employee = doc.employee
 
-    # Update the MIS status of the employee to "Left"
-    employee_doc = frappe.get_doc('Employee', employee)
-    employee_doc.status = 'Left'
-    employee_doc.save()
+#     # Update the MIS status of the employee to "Left"
+#     employee_doc = frappe.get_doc('Employee', employee)
+#     employee_doc.status = 'Left'
+#     employee_doc.save()
 
 
 @frappe.whitelist()
@@ -109,40 +114,40 @@ def validate_leave_dates(doc, method):
         frappe.log_error(f"Error in validate_leave_dates: {str(e)}")
         raise
 
-@frappe.whitelist()
-def validate_leave_application(employee, from_date, to_date):
-    try:
-        leave_type_list = ['Casual Leave', 'Compensatory Off']
+# @frappe.whitelist()
+# def validate_leave_application(employee, from_date, to_date):
+#     try:
+#         leave_type_list = ['Casual Leave', 'Compensatory Off']
         
-        existing_leave_applications = frappe.get_all(
-            'Leave Application',
-            filters={
-                'employee': employee,
-                'leave_type': ('in', leave_type_list),
-                'from_date': ('<=', to_date),
-                'to_date': ('>=', from_date)
-            },
-        )
+#         existing_leave_applications = frappe.get_all(
+#             'Leave Application',
+#             filters={
+#                 'employee': employee,
+#                 'leave_type': ('in', leave_type_list),
+#                 'from_date': ('<=', to_date),
+#                 'to_date': ('>=', from_date)
+#             },
+#         )
         
-        if existing_leave_applications:
-            frappe.throw("An overlapping leave application already exists with Casual Leave or Compensatory Off type.")
+#         if existing_leave_applications:
+#             frappe.throw("An overlapping leave application already exists with Casual Leave or Compensatory Off type.")
 
-    except Exception as e:
-        frappe.log_error(f"Error in validate_leave_application: {str(e)}")
-        raise
+#     except Exception as e:
+#         frappe.log_error(f"Error in validate_leave_application: {str(e)}")
+#         raise
 
 
-@frappe.whitelist()
-def check_earn_leave(frm_date):
-    date = add_days(frm_date,-15)
-    if not today() <= date:
-        frappe.throw("Earned leave must be applied before 15 days of the leave date")
+# @frappe.whitelist()
+# def check_earn_leave(frm_date):
+#     date = add_days(frm_date,-15)
+#     if not today() <= date:
+#         frappe.throw("Earned leave must be applied before 15 days of the leave date")
 
-@frappe.whitelist()
-def check_earn_lve(to_date):
-    date = add_days(to_date,2)
-    if today() > date:
-        frappe.throw("you have exceed the two days of grace period")
+# @frappe.whitelist()
+# def check_earn_lve(to_date):
+#     date = add_days(to_date,2)
+#     if today() > date:
+#         frappe.throw("you have exceed the two days of grace period")
 
 def validate_earn_leave(doc, method):
     if doc.leave_type == 'Earned Leave':
@@ -232,31 +237,22 @@ def check_leave_overlap(doc):
 
 
 
-@frappe.whitelist()
-def update_relieving_date():
-    rf=frappe.db.get_all("Resignation Form",{"docstatus":1},['*'])
-    today = datetime.now()
-    yesterday = today - timedelta(days=1)
-    formatted_date = yesterday.strftime("%Y-%m-%d")
-    for i in rf:
-        if str(i.relieving_date) == formatted_date:
-            value=frappe.get_all("Employee",["status","employee_name"])
-            for j in value:
-                if i.employee_name==j.employee_name:
-                    frappe.db.set_value("Employee","name","status","Left")
-                    frappe.db.set_value("Employee","name","relieving_date",i.relieving_date)
+# @frappe.whitelist()
+# def update_relieving_date():
+#     # updates the status as left and relieving date in employee MIS
+#     rf=frappe.db.get_all("Resignation Form",{"docstatus":1},['*'])
+#     today = datetime.now()
+#     yesterday = today - timedelta(days=1)
+#     formatted_date = yesterday.strftime("%Y-%m-%d")
+#     for i in rf:
+#         if str(i.relieving_date) == formatted_date:
+#             value=frappe.get_all("Employee",["status","employee_name"])
+#             for j in value:
+#                 if i.employee_name==j.employee_name:
+#                     frappe.db.set_value("Employee","name","status","Left")
+#                     frappe.db.set_value("Employee","name","relieving_date",i.relieving_date)
 
-@frappe.whitelist()
-def create_hooks_att():
-    job = frappe.db.exists('Scheduled Job Type', 'update_relieving_date')
-    if not job:
-        att = frappe.new_doc("Scheduled Job Type")
-        att.update({
-            "method": 'tsi.custom.update_relieving_date',
-            "frequency": 'Cron',
-            "cron_format": '30 00 * * *'
-        })
-        att.save(ignore_permissions=True)
+
 
 @frappe.whitelist()
 def update_att_checkin():
@@ -271,319 +267,326 @@ def get_companies():
     va = frappe.get_all("Salary Component", filters={"monthly_salary_": 1}, fields=["name"])
     return [item['name'] for item in va]
 
-@frappe.whitelist()
-def salary_details(doc):
-    data = '<table class="table table-bordered" style="width:80%;margin-left:16mm;">' 
-    ware = frappe.get_doc("Job Applicant", doc.name)
-    border_color = "black" 
-    data += '<tr>'
-    data += '<td style="text-align:center; border: 1px solid {0};"><b>S.NO</b></td>'.format(border_color)  
-    data += '<td style="text-align:center; border: 1px solid {0};"><b>PARTICULARS</b></td>'.format(border_color)  
-    data += '<td style="text-align:center; border: 1px solid {0};"><b>AMOUNT (PER MONTHS) RS.</b></td>'.format(border_color)  
-    data += '<tr>'
-    a = 1
+# @frappe.whitelist()
+# def salary_details(doc):
+#     # method to get the salary details from the applicant for print format (called in jinja)
+#     data = '<table class="table table-bordered" style="width:80%;margin-left:16mm;">' 
+#     ware = frappe.get_doc("Job Applicant", doc.name)
+#     border_color = "black" 
+#     data += '<tr>'
+#     data += '<td style="text-align:center; border: 1px solid {0};"><b>S.NO</b></td>'.format(border_color)  
+#     data += '<td style="text-align:center; border: 1px solid {0};"><b>PARTICULARS</b></td>'.format(border_color)  
+#     data += '<td style="text-align:center; border: 1px solid {0};"><b>AMOUNT (PER MONTHS) RS.</b></td>'.format(border_color)  
+#     data += '<tr>'
+#     a = 1
 
-    for item in ware.salary_details:
-        data += '<tr>'
-        data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, a)  
-        data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, item.particulars or '')  
-        data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, item.amount_per_month_rs or 0)  
-        data += '</tr>'
-        a += 1
+#     for item in ware.salary_details:
+#         data += '<tr>'
+#         data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, a)  
+#         data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, item.particulars or '')  
+#         data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, item.amount_per_month_rs or 0)  
+#         data += '</tr>'
+#         a += 1
 
-    data += '<tr>'
-    data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, a)  
-    data += '<td style="text-align:center; border: 1px solid {0};"><b>Total A</b></td>'.format(border_color)  
-    data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, doc.total or 0)  
-    data += '</tr>'
-    a += 1
+#     data += '<tr>'
+#     data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, a)  
+#     data += '<td style="text-align:center; border: 1px solid {0};"><b>Total A</b></td>'.format(border_color)  
+#     data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, doc.total or 0)  
+#     data += '</tr>'
+#     a += 1
 
-    for item in ware.yearly_salary_details:
-        data += '<tr>'
-        data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, a)  
-        data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, item.particulars or '')  
-        data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, item.amount_per_month_rs or 0)  
-        data += '</tr>'
-        a += 1
+#     for item in ware.yearly_salary_details:
+#         data += '<tr>'
+#         data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, a)  
+#         data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, item.particulars or '')  
+#         data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, item.amount_per_month_rs or 0)  
+#         data += '</tr>'
+#         a += 1
 
-    data += '<tr>'
-    data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, a)  
-    data += '<td style="text-align:center; border: 1px solid {0};"><b>Total B</b></td>'.format(border_color)  
-    data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, doc.total_b or 0)  
-    data += '</tr>'
-    a += 1
+#     data += '<tr>'
+#     data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, a)  
+#     data += '<td style="text-align:center; border: 1px solid {0};"><b>Total B</b></td>'.format(border_color)  
+#     data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, doc.total_b or 0)  
+#     data += '</tr>'
+#     a += 1
 
-    data += '<tr>'
-    data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, a)  
-    data += '<td style="text-align:center; border: 1px solid {0};"><b>Total A-B</b></td>'.format(border_color)  
-    data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, doc.total_a_b or 0)  
-    data += '</tr>'
-    data += '</table>'
-    return data
-
-
-@frappe.whitelist()
-def update_att(doc,method):
-    print("HI")
-    if doc.attendance != '' and doc.log_type == "IN":
-        print("HI")
-        if frappe.db.exists("Attendance",{'name':doc.attendance}):
-            att = frappe.get_doc("Attendance",{'name':doc.attendance})
-            att.in_time = doc.time
-            att.save(ignore_permissions=True)
-            frappe.db.commit()
-    elif doc.attendance != '' and doc.log_type == "OUT":
-        print("HI")
-        if frappe.db.exists("Attendance",{'name':doc.attendance}):
-            att = frappe.get_doc("Attendance",{'name':doc.attendance})
-            att.out_time = doc.time
-            att.save(ignore_permissions=True)
-            frappe.db.commit()
-    if frappe.db.exists("Attendance",{'name':doc.attendance}):
-        att = frappe.get_doc('Attendance',{'name':doc.attendance})
-        if att.shift and att.in_time and att.out_time :
-            if att.on_duty_application != "":
-                if att.in_time and att.out_time:
-                    in_time = att.in_time
-                    out_time = att.out_time
-            else:
-                if att.session_from_time and att.session_to_time: 
-                    in_time = att.session_from_time
-                    out_time = att.session_to_time
-            att_wh = time_diff_in_hours(out_time,in_time)
-            ly = frappe.get_value("Late Entry",{'employee':att.employee,'permission_date':att.attendance_date,'docstatus':('!=','2')},['late']) or 0
-            et = frappe.get_value("Early Out",{'employee':att.employee,'permission_date':att.attendance_date,'docstatus':('!=','2')},['out']) or 0
-            tot = ly + et
-            tot_lyet = tot/60
-            wh = float(att_wh) + float(tot_lyet)
-            decimal_hours = wh
-            hours, remainder = divmod(decimal_hours, 1)
-            minutes, seconds = divmod(remainder * 3600, 60)
-            time_str = f"{int(hours)} hours and {int(minutes)} minutes and {int(seconds)} seconds"
-            time_in_standard_format = f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
-            frappe.db.set_value('Attendance', att.name, 'total_working_hours', time_in_standard_format)
-            frappe.db.set_value('Attendance', att.name, 'working_hours', wh)
-            if wh < 4:
-                frappe.db.set_value('Attendance',att.name,'status','Absent')
-            elif wh >= 4 and wh < 8:
-                frappe.db.set_value('Attendance',att.name,'status','Half Day')
-            elif wh >= 8:
-                frappe.db.set_value('Attendance',att.name,'status','Present')  
-            shift_st = frappe.get_value("Shift Type",{'name':att.shift},['start_time'])
-            shift_et = frappe.get_value("Shift Type",{'name':att.shift},['end_time'])
-            if att.shift in ["I","II","G"]:
-                shift_tot = time_diff_in_hours(shift_et,shift_st)
-            elif att.shift == 'III':
-                shift_tot = 8.0
-            elif att.shift == 'N':
-                shift_tot = 8.5
-            ot_hours = time(0,0,0)
-            shift_hours = frappe.get_value("Shift Type",{'name':att.shift},['total_working_hours'])
-            hours, minutes, seconds = map(int, time_in_standard_format.split(':'))
-            time_in_standard_format_timedelta = timedelta(hours=hours, minutes=minutes, seconds=seconds)
-            hh = check_holiday(att.attendance_date,att.employee)
-            if not hh:
-                if wh > shift_tot and time_in_standard_format_timedelta > shift_hours:
-                    print("HI")
-                    extra_hours_float = wh -  shift_tot 
-                    extra_hours = time_in_standard_format_timedelta - shift_hours
-                    time_diff = datetime.strptime(str(extra_hours), '%H:%M:%S').time()
-                    frappe.db.set_value('Attendance',att.name,'extra_hours',extra_hours_float)
-                    frappe.db.set_value('Attendance',att.name,'total_extra_hours',time_diff)
-                    if time_diff.hour >= 1 :
-                        if time_diff.minute <= 29:
-                            ot_hours = time(time_diff.hour,0,0)
-                        else:
-                            ot_hours = time(time_diff.hour,30,0)
-                    elif time_diff.hour == 0 :
-                        if time_diff.minute <= 29:
-                            ot_hours = time(0,0,0)
-                        else:
-                            ot_hours = time(time_diff.hour,30,0)
-                    ftr = [3600,60,1]
-                    hr = sum([a*b for a,b in zip(ftr, map(int,str(ot_hours).split(':')))])
-                    ot_hr = round(hr/3600,1)
-                    frappe.db.set_value('Attendance',att.name,'total_overtime_hours',ot_hours)
-                    frappe.db.set_value('Attendance',att.name,'overtime_hours',ot_hr)
-                else:
-                    frappe.db.set_value('Attendance',att.name,'extra_hours',"0.0")
-                    frappe.db.set_value('Attendance',att.name,'total_extra_hours',"00:00:00")
-                    frappe.db.set_value('Attendance',att.name,'total_overtime_hours',"00:00:00")
-                    frappe.db.set_value('Attendance',att.name,'overtime_hours',"0.0")
-            else:
-                print("HII")
-                extra_hours_float = wh  
-                extra_hours = time_in_standard_format_timedelta 
-                time_diff = datetime.strptime(str(extra_hours), '%H:%M:%S').time()
-                print(att.name)
-                print(extra_hours)
-                frappe.db.set_value('Attendance',att.name,'extra_hours',extra_hours_float)
-                frappe.db.set_value('Attendance',att.name,'total_extra_hours',time_diff)
-                if time_diff.hour >= 1 :
-                    if time_diff.minute <= 29:
-                        ot_hours = time(time_diff.hour,0,0)
-                    else:
-                        ot_hours = time(time_diff.hour,30,0)
-                elif time_diff.hour == 0 :
-                    if time_diff.minute <= 29:
-                        ot_hours = time(0,0,0)
-                    else:
-                        ot_hours = time(time_diff.hour,30,0)
-                ftr = [3600,60,1]
-                hr = sum([a*b for a,b in zip(ftr, map(int,str(ot_hours).split(':')))])
-                ot_hr = round(hr/3600,1)
-                frappe.db.set_value('Attendance',att.name,'total_overtime_hours',ot_hours)
-                frappe.db.set_value('Attendance',att.name,'overtime_hours',ot_hr)
-        else:
-            frappe.db.set_value('Attendance', att.name,'total_working_hours',"00:00:00")
-            frappe.db.set_value('Attendance', att.name,'working_hours',"0.0")
-            frappe.db.set_value('Attendance',att.name,'extra_hours',"0.0")
-            frappe.db.set_value('Attendance',att.name,'total_extra_hours',"00:00:00")
-            frappe.db.set_value('Attendance',att.name,'total_overtime_hours',"00:00:00")
-            frappe.db.set_value('Attendance',att.name,'overtime_hours',"0.0")
+#     data += '<tr>'
+#     data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, a)  
+#     data += '<td style="text-align:center; border: 1px solid {0};"><b>Total A-B</b></td>'.format(border_color)  
+#     data += '<td style="text-align:center; border: 1px solid {0};">{1}</td>'.format(border_color, doc.total_a_b or 0)  
+#     data += '</tr>'
+#     data += '</table>'
+#     return data
 
 
+# @frappe.whitelist()
+# def update_att(doc,method):
+#     # attendance will be updated every time when checkin is updated
+#     print("HI")
+#     if doc.attendance != '' and doc.log_type == "IN":
+#         print("HI")
+#         if frappe.db.exists("Attendance",{'name':doc.attendance}):
+#             att = frappe.get_doc("Attendance",{'name':doc.attendance})
+#             att.in_time = doc.time
+#             att.save(ignore_permissions=True)
+#             frappe.db.commit()
+#     elif doc.attendance != '' and doc.log_type == "OUT":
+#         print("HI")
+#         if frappe.db.exists("Attendance",{'name':doc.attendance}):
+#             att = frappe.get_doc("Attendance",{'name':doc.attendance})
+#             att.out_time = doc.time
+#             att.save(ignore_permissions=True)
+#             frappe.db.commit()
+#     if frappe.db.exists("Attendance",{'name':doc.attendance}):
+#         att = frappe.get_doc('Attendance',{'name':doc.attendance})
+#         if att.shift and att.in_time and att.out_time :
+#             if att.on_duty_application != "":
+#                 if att.in_time and att.out_time:
+#                     in_time = att.in_time
+#                     out_time = att.out_time
+#             else:
+#                 if att.session_from_time and att.session_to_time: 
+#                     in_time = att.session_from_time
+#                     out_time = att.session_to_time
+#             att_wh = time_diff_in_hours(out_time,in_time)
+#             ly = frappe.get_value("Late Entry",{'employee':att.employee,'permission_date':att.attendance_date,'docstatus':('!=','2')},['late']) or 0
+#             et = frappe.get_value("Early Out",{'employee':att.employee,'permission_date':att.attendance_date,'docstatus':('!=','2')},['out']) or 0
+#             tot = ly + et
+#             tot_lyet = tot/60
+#             wh = float(att_wh) + float(tot_lyet)
+#             decimal_hours = wh
+#             hours, remainder = divmod(decimal_hours, 1)
+#             minutes, seconds = divmod(remainder * 3600, 60)
+#             time_str = f"{int(hours)} hours and {int(minutes)} minutes and {int(seconds)} seconds"
+#             time_in_standard_format = f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
+#             frappe.db.set_value('Attendance', att.name, 'total_working_hours', time_in_standard_format)
+#             frappe.db.set_value('Attendance', att.name, 'working_hours', wh)
+#             if wh < 4:
+#                 frappe.db.set_value('Attendance',att.name,'status','Absent')
+#             elif wh >= 4 and wh < 8:
+#                 frappe.db.set_value('Attendance',att.name,'status','Half Day')
+#             elif wh >= 8:
+#                 frappe.db.set_value('Attendance',att.name,'status','Present')  
+#             shift_st = frappe.get_value("Shift Type",{'name':att.shift},['start_time'])
+#             shift_et = frappe.get_value("Shift Type",{'name':att.shift},['end_time'])
+#             if att.shift in ["I","II","G"]:
+#                 shift_tot = time_diff_in_hours(shift_et,shift_st)
+#             elif att.shift == 'III':
+#                 shift_tot = 8.0
+#             elif att.shift == 'N':
+#                 shift_tot = 8.5
+#             ot_hours = time(0,0,0)
+#             shift_hours = frappe.get_value("Shift Type",{'name':att.shift},['total_working_hours'])
+#             hours, minutes, seconds = map(int, time_in_standard_format.split(':'))
+#             time_in_standard_format_timedelta = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+#             hh = check_holiday(att.attendance_date,att.employee)
+#             if not hh:
+#                 if wh > shift_tot and time_in_standard_format_timedelta > shift_hours:
+#                     print("HI")
+#                     extra_hours_float = wh -  shift_tot 
+#                     extra_hours = time_in_standard_format_timedelta - shift_hours
+#                     time_diff = datetime.strptime(str(extra_hours), '%H:%M:%S').time()
+#                     frappe.db.set_value('Attendance',att.name,'extra_hours',extra_hours_float)
+#                     frappe.db.set_value('Attendance',att.name,'total_extra_hours',time_diff)
+#                     if time_diff.hour >= 1 :
+#                         if time_diff.minute <= 29:
+#                             ot_hours = time(time_diff.hour,0,0)
+#                         else:
+#                             ot_hours = time(time_diff.hour,30,0)
+#                     elif time_diff.hour == 0 :
+#                         if time_diff.minute <= 29:
+#                             ot_hours = time(0,0,0)
+#                         else:
+#                             ot_hours = time(time_diff.hour,30,0)
+#                     ftr = [3600,60,1]
+#                     hr = sum([a*b for a,b in zip(ftr, map(int,str(ot_hours).split(':')))])
+#                     ot_hr = round(hr/3600,1)
+#                     frappe.db.set_value('Attendance',att.name,'total_overtime_hours',ot_hours)
+#                     frappe.db.set_value('Attendance',att.name,'overtime_hours',ot_hr)
+#                 else:
+#                     frappe.db.set_value('Attendance',att.name,'extra_hours',"0.0")
+#                     frappe.db.set_value('Attendance',att.name,'total_extra_hours',"00:00:00")
+#                     frappe.db.set_value('Attendance',att.name,'total_overtime_hours',"00:00:00")
+#                     frappe.db.set_value('Attendance',att.name,'overtime_hours',"0.0")
+#             else:
+#                 print("HII")
+#                 extra_hours_float = wh  
+#                 extra_hours = time_in_standard_format_timedelta 
+#                 time_diff = datetime.strptime(str(extra_hours), '%H:%M:%S').time()
+#                 print(att.name)
+#                 print(extra_hours)
+#                 frappe.db.set_value('Attendance',att.name,'extra_hours',extra_hours_float)
+#                 frappe.db.set_value('Attendance',att.name,'total_extra_hours',time_diff)
+#                 if time_diff.hour >= 1 :
+#                     if time_diff.minute <= 29:
+#                         ot_hours = time(time_diff.hour,0,0)
+#                     else:
+#                         ot_hours = time(time_diff.hour,30,0)
+#                 elif time_diff.hour == 0 :
+#                     if time_diff.minute <= 29:
+#                         ot_hours = time(0,0,0)
+#                     else:
+#                         ot_hours = time(time_diff.hour,30,0)
+#                 ftr = [3600,60,1]
+#                 hr = sum([a*b for a,b in zip(ftr, map(int,str(ot_hours).split(':')))])
+#                 ot_hr = round(hr/3600,1)
+#                 frappe.db.set_value('Attendance',att.name,'total_overtime_hours',ot_hours)
+#                 frappe.db.set_value('Attendance',att.name,'overtime_hours',ot_hr)
+#         else:
+#             frappe.db.set_value('Attendance', att.name,'total_working_hours',"00:00:00")
+#             frappe.db.set_value('Attendance', att.name,'working_hours',"0.0")
+#             frappe.db.set_value('Attendance',att.name,'extra_hours',"0.0")
+#             frappe.db.set_value('Attendance',att.name,'total_extra_hours',"00:00:00")
+#             frappe.db.set_value('Attendance',att.name,'total_overtime_hours',"00:00:00")
+#             frappe.db.set_value('Attendance',att.name,'overtime_hours',"0.0")
 
-def check_holiday(date, emp):
-    holiday_list = frappe.db.get_value('Employee', {'name': emp}, 'holiday_list')
-    holiday = frappe.db.sql("""select `tabHoliday`.holiday_date, `tabHoliday`.weekly_off ,`tabHoliday`.others
-                             from `tabHoliday List` 
-                             left join `tabHoliday` on `tabHoliday`.parent = `tabHoliday List`.name 
-                             where `tabHoliday List`.name = %s and holiday_date = %s""", 
-                             (holiday_list, date), as_dict=True)
-    doj = frappe.db.get_value("Employee", {'name': emp}, "date_of_joining")
-    status = ''
 
-    if holiday:
+
+# def check_holiday(date, emp):
+#     # method returns the holiday with it's short code, used to check that day is holiday or not
+#     holiday_list = frappe.db.get_value('Employee', {'name': emp}, 'holiday_list')
+#     holiday = frappe.db.sql("""select `tabHoliday`.holiday_date, `tabHoliday`.weekly_off ,`tabHoliday`.others
+#                              from `tabHoliday List` 
+#                              left join `tabHoliday` on `tabHoliday`.parent = `tabHoliday List`.name 
+#                              where `tabHoliday List`.name = %s and holiday_date = %s""", 
+#                              (holiday_list, date), as_dict=True)
+#     doj = frappe.db.get_value("Employee", {'name': emp}, "date_of_joining")
+#     status = ''
+
+#     if holiday:
         
-        if doj < holiday[0].holiday_date:
-            if holiday[0].weekly_off == 1:
-                status = "WW"
-            else:
-                status = holiday[0].others
-        else:
-            status = 'Not Joined'
+#         if doj < holiday[0].holiday_date:
+#             if holiday[0].weekly_off == 1:
+#                 status = "WW"
+#             else:
+#                 status = holiday[0].others
+#         else:
+#             status = 'Not Joined'
         
-    return status
+#     return status
 
 
 
 
-@frappe.whitelist()
-def monthly_in_out(start_date,end_date,category):
-    data=""
-    dates = get_dates(start_date,end_date)
-    dates1 = get_date(start_date,end_date)
-    if category:
-        employees = frappe.get_all("Employee",{'employee_catagory':category,'status':'Active'},['*'])
-    else:
-        employees = frappe.get_all("Employee",{'status':'Active'},['*'])
-    for e in employees:
-        data +="""
-        <style>
-            .print-format {
-                padding: 0px;
-            }
-            @media screen {
-                .print-format {
-                    padding: 0in;
-                }
-            }
-        </style>
-        <div class="container" style="page-break-inside:avoid"><p style="font-size:11px"><b>&nbsp; &nbsp;&nbsp;Employee Code/Name  </b>%s   <b>%s</b></p>"""%(e.name,e.employee_name)
-        data +='<div class="row"><div class="col-xs-6"><table width=50% border =1>'
-        data += "<tr style='font-size:6px;'><td style='font-size:6px;'><b><center>Day</center></b></td><td style='font-size:6px;'><b><center>Shift</center></b></td><td style='font-size:6px;'><b><center>Status</center></b></td><td style='font-size:6px;'><b><center>Time In</center></b></td><td style='font-size:6px;'><b><center>Time Out</center></b></td><td style='font-size:6px;'><b><center>Total Hours</center></b></td><td style='font-size:6px;'><b><center>Late</center></b></td><td style='font-size:6px;'><b><center>Early</center</b></td><td style='font-size:6px;'><b><center>OT</center</b></td></tr>"
-        total_ot = timedelta(0,0,0)
-        for date in dates:
-            dt = datetime.strptime(date,'%Y-%m-%d')
-            d = dt.strftime('%d')
-            shift = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'shift') or ''
-            status = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'shift_status') or ''
-            in_time = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'in_time')
-            if in_time is not None:
-                    formatted_time = in_time.strftime('%H:%M')
-            else:
-                formatted_time = ''
-            out_time = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'out_time')
-            if out_time is not None:
-                    formatted_out_time = out_time.strftime('%H:%M')
-            else:
-                formatted_out_time = ''
-            working_hours = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'total_working_hours') or ''
-            late = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'late_entry')
-            if late==1:
-                late_entry=frappe.db.get_value("Late Entry",{"employee":e.name,"permission_date":date},'late')
-            else:
-                late_entry=' '
-            early = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'early_exit')
-            if early==1:
-                early_exit=frappe.db.get_value("Early Out",{"employee":e.name,"permission_date":date},'out')
-            else:
-                early_exit=' '
-            overtime_hours = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'overtime_hours') or ''
+# @frappe.whitelist()
+# def monthly_in_out(start_date,end_date,category):
+#     # jinja method used in report dashboard to print the monthly in and out report
+#     data=""
+#     dates = get_dates(start_date,end_date)
+#     dates1 = get_date(start_date,end_date)
+#     if category:
+#         employees = frappe.get_all("Employee",{'employee_catagory':category,'status':'Active'},['*'])
+#     else:
+#         employees = frappe.get_all("Employee",{'status':'Active'},['*'])
+#     for e in employees:
+#         data +="""
+#         <style>
+#             .print-format {
+#                 padding: 0px;
+#             }
+#             @media screen {
+#                 .print-format {
+#                     padding: 0in;
+#                 }
+#             }
+#         </style>
+#         <div class="container" style="page-break-inside:avoid"><p style="font-size:11px"><b>&nbsp; &nbsp;&nbsp;Employee Code/Name  </b>%s   <b>%s</b></p>"""%(e.name,e.employee_name)
+#         data +='<div class="row"><div class="col-xs-6"><table width=50% border =1>'
+#         data += "<tr style='font-size:6px;'><td style='font-size:6px;'><b><center>Day</center></b></td><td style='font-size:6px;'><b><center>Shift</center></b></td><td style='font-size:6px;'><b><center>Status</center></b></td><td style='font-size:6px;'><b><center>Time In</center></b></td><td style='font-size:6px;'><b><center>Time Out</center></b></td><td style='font-size:6px;'><b><center>Total Hours</center></b></td><td style='font-size:6px;'><b><center>Late</center></b></td><td style='font-size:6px;'><b><center>Early</center</b></td><td style='font-size:6px;'><b><center>OT</center</b></td></tr>"
+#         total_ot = timedelta(0,0,0)
+#         for date in dates:
+#             dt = datetime.strptime(date,'%Y-%m-%d')
+#             d = dt.strftime('%d')
+#             shift = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'shift') or ''
+#             status = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'shift_status') or ''
+#             in_time = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'in_time')
+#             if in_time is not None:
+#                     formatted_time = in_time.strftime('%H:%M')
+#             else:
+#                 formatted_time = ''
+#             out_time = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'out_time')
+#             if out_time is not None:
+#                     formatted_out_time = out_time.strftime('%H:%M')
+#             else:
+#                 formatted_out_time = ''
+#             working_hours = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'total_working_hours') or ''
+#             late = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'late_entry')
+#             if late==1:
+#                 late_entry=frappe.db.get_value("Late Entry",{"employee":e.name,"permission_date":date},'late')
+#             else:
+#                 late_entry=' '
+#             early = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'early_exit')
+#             if early==1:
+#                 early_exit=frappe.db.get_value("Early Out",{"employee":e.name,"permission_date":date},'out')
+#             else:
+#                 early_exit=' '
+#             overtime_hours = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'overtime_hours') or ''
 
-            data += "<tr style='font-size:6px;'><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"%(d,shift,status,formatted_time,formatted_out_time,working_hours or '',late_entry,early_exit,overtime_hours or '')
-        data += '</table></div>'
-        data += '<div class="col-xs-6"><table  border= 1 width=50%>'
-        data += "<tr style='font-size:6px;'><td style='font-size:6px;'><b><center>Day</center></b></td><td style='font-size:6px;'><b><center>Shift</center></b></td><td style='font-size:6px;'><b><center>Status</center></b></td><td style='font-size:6px;'><b><center>Time In</center></b></td><td style='font-size:6px;'><b><center>Time Out</center></b></td><td style='font-size:6px;'><b><center>Total Hours</center></b></td><td style='font-size:6px;'><b><center>Late</center></b></td><td style='font-size:6px;'><b><center>Early</center</b></td><td style='font-size:6px;'><b><center>OT</center</b></td></tr>"
+#             data += "<tr style='font-size:6px;'><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"%(d,shift,status,formatted_time,formatted_out_time,working_hours or '',late_entry,early_exit,overtime_hours or '')
+#         data += '</table></div>'
+#         data += '<div class="col-xs-6"><table  border= 1 width=50%>'
+#         data += "<tr style='font-size:6px;'><td style='font-size:6px;'><b><center>Day</center></b></td><td style='font-size:6px;'><b><center>Shift</center></b></td><td style='font-size:6px;'><b><center>Status</center></b></td><td style='font-size:6px;'><b><center>Time In</center></b></td><td style='font-size:6px;'><b><center>Time Out</center></b></td><td style='font-size:6px;'><b><center>Total Hours</center></b></td><td style='font-size:6px;'><b><center>Late</center></b></td><td style='font-size:6px;'><b><center>Early</center</b></td><td style='font-size:6px;'><b><center>OT</center</b></td></tr>"
 
-        # data += "<tr style='font-size:9px;2'><td><b><center>Day</center></b></td><td><b><center>Shift</center></b></td><td><b><center>Status</center></b></td><td><b><center>Time In</center></b></td><td><b><center>Time Out</center></b></td><td><b><center>Total Hours</center></b></td><td><b><center>Late</center></b></td><td><b><center>Early</center</b></td><td><b><center>OT</center</b></td></tr>"
-        total_ot = timedelta(0,0,0)
-        for date in dates1:
-            dt = datetime.strptime(date,'%Y-%m-%d')
-            d = dt.strftime('%d')
-            shift = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'shift') or ''
-            status = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'shift_status') or ''
-            in_time = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'in_time')
-            if in_time is not None:
-                    formatted_time = in_time.strftime('%H:%M')
-            else:
-                formatted_time = ''
-            out_time = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'out_time')
-            if out_time is not None:
-                    formatted_out_time = out_time.strftime('%H:%M')
-            else:
-                formatted_out_time = ''
-            working_hours = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'total_working_hours') or ''
-            late = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'late_entry')
-            if late==1:
-                late_entry=frappe.db.get_value("Late Entry",{"employee":e.name,"permission_date":date},'late')
-            else:
+#         # data += "<tr style='font-size:9px;2'><td><b><center>Day</center></b></td><td><b><center>Shift</center></b></td><td><b><center>Status</center></b></td><td><b><center>Time In</center></b></td><td><b><center>Time Out</center></b></td><td><b><center>Total Hours</center></b></td><td><b><center>Late</center></b></td><td><b><center>Early</center</b></td><td><b><center>OT</center</b></td></tr>"
+#         total_ot = timedelta(0,0,0)
+#         for date in dates1:
+#             dt = datetime.strptime(date,'%Y-%m-%d')
+#             d = dt.strftime('%d')
+#             shift = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'shift') or ''
+#             status = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'shift_status') or ''
+#             in_time = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'in_time')
+#             if in_time is not None:
+#                     formatted_time = in_time.strftime('%H:%M')
+#             else:
+#                 formatted_time = ''
+#             out_time = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'out_time')
+#             if out_time is not None:
+#                     formatted_out_time = out_time.strftime('%H:%M')
+#             else:
+#                 formatted_out_time = ''
+#             working_hours = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'total_working_hours') or ''
+#             late = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'late_entry')
+#             if late==1:
+#                 late_entry=frappe.db.get_value("Late Entry",{"employee":e.name,"permission_date":date},'late')
+#             else:
           
-                late_entry=' '
-                early = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'early_exit')
-            if early==1:
-                early_exit=frappe.db.get_value("Early Out",{"employee":e.name,"permission_date":date},'out')
-            else:
-                early_exit=' '
-            overtime_hours = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'overtime_hours') or ''
+#                 late_entry=' '
+#                 early = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'early_exit')
+#             if early==1:
+#                 early_exit=frappe.db.get_value("Early Out",{"employee":e.name,"permission_date":date},'out')
+#             else:
+#                 early_exit=' '
+#             overtime_hours = frappe.db.get_value('Attendance' ,{'employee':e.name,"attendance_date":date,'docstatus':('!=','2')},'overtime_hours') or ''
 
-            data += "<tr style='font-size:6px;'><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"%(d,shift,status,formatted_time,formatted_out_time,working_hours or '',late_entry,early_exit,overtime_hours or '')
+#             data += "<tr style='font-size:6px;'><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"%(d,shift,status,formatted_time,formatted_out_time,working_hours or '',late_entry,early_exit,overtime_hours or '')
 
-        data += '</table></div></div></div>'
-    frappe.log_error(title='days',message=data)
-    return data
-def get_dates(start_date,end_date):
-    no_of_days = date_diff(add_days(end_date, 1), start_date)
-    if no_of_days==31:
-        dates = [add_days(start_date,i) for i in range(0,16)]
-    else:
-        dates = [add_days(start_date,i) for i in range(0,15)]
-    return dates
+#         data += '</table></div></div></div>'
+#     frappe.log_error(title='days',message=data)
+#     return data
 
-def get_date(start_date,end_date):
-    no_of_days = date_diff(add_days(end_date, 1), start_date)
-    if no_of_days==31:
-        dates = [add_days(start_date,i) for i in range(16,no_of_days)]
-    else:
-        dates = [add_days(start_date,i) for i in range(15,no_of_days)]
-    return dates
+# def get_dates(start_date,end_date):
+#     # method used to get the dates between the start and end date
+#     no_of_days = date_diff(add_days(end_date, 1), start_date)
+#     if no_of_days==31:
+#         dates = [add_days(start_date,i) for i in range(0,16)]
+#     else:
+#         dates = [add_days(start_date,i) for i in range(0,15)]
+#     return dates
 
-@frappe.whitelist()
-def inactive_employee(doc,method):
-    if doc.status=="Active":
-        if doc.relieving_date:
-            throw(_("Please remove the relieving date for the Active Employee."))
+# def get_date(start_date,end_date):
+#     no_of_days = date_diff(add_days(end_date, 1), start_date)
+#     if no_of_days==31:
+#         dates = [add_days(start_date,i) for i in range(16,no_of_days)]
+#     else:
+#         dates = [add_days(start_date,i) for i in range(15,no_of_days)]
+#     return dates
+
+# @frappe.whitelist()
+# def inactive_employee(doc,method):
+#     # throw error when relieving date is set for active employees
+#     if doc.status=="Active":
+#         if doc.relieving_date:
+#             throw(_("Please remove the relieving date for the Active Employee."))
 
 @frappe.whitelist()
 def automate_dh_approval():
@@ -619,61 +622,43 @@ def get_employee_check_ins():
         check_ins_data[employee_id].append(check_in_date)  # Append date
     return check_ins_data
 
-@frappe.whitelist()
-def update_attendance_bonus():
-    employee = 'TSIS/P028'
-    start_date='2024-04-01'
-    end_date='2024-04-30'
-    nsa=0
-    attendance=frappe.db.sql("select * from `tabAttendance` where employee=%s and attendance_date between %s and %s and shift in ('N','SS-N')",(employee,start_date,end_date),as_dict=True)
-    for att in attendance:
-        if att.status=='Present':
-            nsa+=1
-        elif att.status=='Half Day':
-            nsa+=0.5
-    print(nsa)
 
-
-
-@frappe.whitelist()
-def validate_compensatory_leave_duration(work_from_date):
-    
-    date_string = work_from_date
-    dt = datetime.strptime(date_string,'%Y-%m-%d').date()
-    today = datetime.today().date()
-    c_off = add_months(today,-1)
-    if c_off < today:
-         frappe.throw(_("Compensatory leave cannot be applied after 1 month from the work from date"))
+# @frappe.whitelist()
+# def validate_compensatory_leave_duration(work_from_date):
+#     # method to restrict applying comp off request after 30 from actual date
+#     date_string = work_from_date
+#     dt = datetime.strptime(date_string,'%Y-%m-%d').date()
+#     today = datetime.today().date()
+#     c_off = add_months(today,-1)
+#     if c_off < today:
+#          frappe.throw(_("Compensatory leave cannot be applied after 1 month from the work from date"))
     
 
 
-@frappe.whitelist()
-def update_shift_days(employee, from_date, to_date):
-    att = frappe.db.sql("""
-        SELECT name 
-        FROM `tabAttendance` 
-        WHERE employee = %s 
-            AND attendance_date BETWEEN %s AND %s 
-            AND shift_status = 'P/N'
-    """, (employee, from_date, to_date), as_dict=True)
+# @frappe.whitelist()
+# def update_shift_days(employee, from_date, to_date):
+#     # method returns the count of night shift in salary slip when employees from plastic injection department 
+#     att = frappe.db.sql("""
+#         SELECT name 
+#         FROM `tabAttendance` 
+#         WHERE employee = %s 
+#             AND attendance_date BETWEEN %s AND %s 
+#             AND shift_status = 'P/N'
+#     """, (employee, from_date, to_date), as_dict=True)
 
-    count = len(att)
-    return count
+#     count = len(att)
+#     return count
 
 @frappe.whitelist()
 def attendance_correction():
     checkin = frappe.db.sql("""update `tabLeave Application` set docstatus=0 where name="HR-LAP-2024-00672" """,as_dict = True)
 
-@frappe.whitelist()
-def att_update():
-    attendance=frappe.get_all("Attendance",{'attendance_date':("between",['2024-05-01','2024-05-31']),'docstatus':('!=',2)},['*'])
-    for att in attendance:
-        frappe.db.sql("update `tabAttendance` set total_overtime_hours='00:00:00' where name = %s",(att.name))
-        frappe.db.sql("update `tabAttendance` set overtime_hours='0.0' where name = %s",(att.name))
+
 from datetime import datetime, timedelta
 
 @frappe.whitelist()
 def ot_without_break():
+    # replica of method used for break deduction in mark att code
     from_date = '2024-07-16'
     to_date = '2024-07-31'
     attendance = frappe.db.get_all('Attendance',{'attendance_date':('between',(from_date,to_date)),'docstatus':('!=','2')},['*'],order_by='employee_name ASC')
@@ -819,96 +804,74 @@ def check_holiday(date, emp):
 
 
                     
-import frappe
-from frappe import _
+# import frappe
+# from frappe import _
+# @frappe.whitelist()
+# def leave_days_count(doc):
+#     # method used to return the total no of leaves days in salary slip
+#     leave = frappe.db.sql("""
+#         SELECT sum(total_leave_days) as leave_days
+#         FROM `tabLeave Application`
+#         WHERE employee = %s 
+#             AND from_date <= %s 
+#             AND to_date >= %s
+#             AND leave_type NOT IN ('Leave Without Pay', 'ESI Leave')
+#             AND status = 'Approved'
+#     """, (doc.employee, doc.end_date, doc.start_date), as_dict=True)
+    
+#     return leave[0].leave_days or 0
+
 
 # @frappe.whitelist()
-# def restrict_od(doc, method):
-# 	if frappe.db.exists("On Duty Application", {'employee': doc.employee, 'od_date': doc.od_date, 'docstatus':1}):
-# 	# if od_count>1:
-# 	# 	frappe.errprint(od_count)
-# 	# 	frappe.errprint("exists")
-# 		frappe.throw(_("On Duty Application Already Found for this Employee and Date"))
-
-
-@frappe.whitelist()
-def leave_days_count(doc):
-    leave = frappe.db.sql("""
-        SELECT sum(total_leave_days) as leave_days
-        FROM `tabLeave Application`
-        WHERE employee = %s 
-            AND from_date <= %s 
-            AND to_date >= %s
-            AND leave_type NOT IN ('Leave Without Pay', 'ESI Leave')
-            AND docstatus = 1
-    """, (doc.employee, doc.end_date, doc.start_date), as_dict=True)
-    
-    return leave[0].leave_days or 0
-
-@frappe.whitelist()
-def salary_silp_update():
-    frappe.db.sql(""" 
-    UPDATE `tabSalary Slip` 
-    SET leave_without_pay = '0', 
-        absent_days = '2',
-        payment_days = '29' 
-    WHERE name = 'Sal Slip/TSIS/S10122/00008'
-""")
-
-
-@frappe.whitelist()
-def sl_allocation():
-    date_cutoff = datetime(2024, 2, 1)
-    date_cutoff_str = date_cutoff.strftime('%Y-%m-%d')
-    emp_list=frappe.db.get_all("Employee",{'status':"Active","date_of_joining":['<=',date_cutoff_str]},['*'])
-    emp_list_count=frappe.db.count("Employee",{'status':"Active","date_of_joining":['<=',date_cutoff_str]})
-    for i in emp_list:
-        sl = frappe.new_doc('Leave Allocation')
-        sl.employee = i.name
-        sl.from_date = '2024-01-01'
-        sl.to_date = '2024-12-31'
-        sl.leave_type='SICK LEAVE'
-        sl.new_leaves_allocated = 5
-        sl.insert() 
-        sl.submit()
-
-@frappe.whitelist()
-def get_casual_leaves(doc,method):
-    month_start=get_first_day(doc.from_date)
-    month_end=get_last_day(doc.to_date)
-    cl_applications=frappe.get_all(
-        "Leave Application",
-        filters={
-            'employee':doc.employee,
-            'from_date':('between',[month_start,month_end]),
-            'to_date':('between',[month_start,month_end]),
-            'leave_type':'Casual Leave',
-            'workflow_state':('!=','Cancelled')
-        },
-        fields=['total_leave_days'])
-    total_cl=sum([i['total_leave_days'] for i in cl_applications])
-    frappe.errprint(total_cl)
-    if total_cl >3:
-        frappe.throw("3 Casual Leaves only allowed per month.")
+# def get_casual_leaves(doc,method):
+#     if doc.leave_type == "Casual Leave":
+#         # method to restrict the casual leave applications only 3 per month
+#         if isinstance(doc.from_date, str):
+#             doc.from_date = datetime.strptime(doc.from_date, "%Y-%m-%d").date()
+#         if doc.from_date.day < 26:
+#             month_start = (doc.from_date - relativedelta(months=1)).replace(day=26)
+#             month_end = doc.from_date.replace(day=25)
+#         else:
+#             month_start = doc.from_date.replace(day=26)
+#             month_end = (doc.from_date + relativedelta(months=1)).replace(day=25)
+#         # month_start=get_first_day(doc.from_date)
+#         # month_end=get_last_day(doc.to_date)
+#         cl_applications=frappe.get_all(
+#             "Leave Application",
+#             filters={
+#                 'employee':doc.employee,
+#                 'from_date':('between',[month_start,month_end]),
+#                 'to_date':('between',[month_start,month_end]),
+#                 'leave_type':'Casual Leave',
+#                 'name':('!=',doc.name),
+#                 'workflow_state':('!=','Cancelled')
+#             },
+#             fields=['total_leave_days'])
+#         total_cl=sum([i['total_leave_days'] for i in cl_applications])
+#         total_cl+=doc.total_leave_days
+#         if total_cl >3:
+#             frappe.throw("3 Casual Leaves only allowed per month.")
         
-@frappe.whitelist()
-def cl_el_restriction(doc,method):
-    if doc.leave_type=='Earned Leave' or doc.leave_type=='Casual Leave':
-            frappe.errprint("PAss")
-            sdate = getdate(doc.from_date)
-            edate = getdate(doc.to_date)
-            before_check = sdate.weekday()
-            after_check = edate.weekday()
-            if before_check==0:
-                frappe.errprint("PAss1")
-                prev_day = frappe.utils.add_days(sdate, -2)
-                if frappe.db.exists('Leave Application', {'employee': doc.employee,'to_date':prev_day,'leave_type': doc.leave_type,'docstatus': ('!=', 2)}):
-                    frappe.throw("Already another Leave Application found on Saturday.")
-            elif after_check==5:
-                frappe.errprint("PAss2")
-                next_day = frappe.utils.add_days(edate, 2)
-                if frappe.db.exists('Leave Application', {'employee': doc.employee,'from_date':next_day,'leave_type': doc.leave_type,'docstatus': ('!=', 2)}):
-                    frappe.throw("Already another Leave Application found on Monday.")
+# @frappe.whitelist()
+# def cl_el_restriction(doc,method):
+#     # method to restrict the EL and CL application before or after sunday
+#     if doc.leave_type=='Earned Leave' or doc.leave_type=='Casual Leave':
+#             sdate = getdate(doc.from_date)
+#             edate = getdate(doc.to_date)
+#             before_check = sdate.weekday()
+#             after_check = edate.weekday()
+#             if before_check==0:
+#                 frappe.errprint('before')
+#                 prev_day = frappe.utils.add_days(sdate, -2)
+#                 frappe.errprint(prev_day)
+#                 if frappe.db.exists('Leave Application', {'employee': doc.employee,'to_date':prev_day,'leave_type': doc.leave_type,'docstatus': ('!=', 2)}):
+#                     frappe.throw("Already another Leave Application found on Saturday.")
+#             elif after_check==5:
+#                 frappe.errprint('After')
+#                 next_day = frappe.utils.add_days(edate, 2)
+#                 frappe.errprint(next_day)
+#                 if frappe.db.exists('Leave Application', {'employee': doc.employee,'from_date':next_day,'leave_type': doc.leave_type,'docstatus': ('!=', 2)}):
+#                     frappe.throw("Already another Leave Application found on Monday.")
 
 @frappe.whitelist()
 def update_late_entry_time():
@@ -934,3 +897,106 @@ def update_late_entry_time():
     # Print the count of matching entries
     print(i)
 
+# @frappe.whitelist()
+# def el_restriction(doc, method):
+#     # Get the start and end of the year for the leave application
+#     start_date=getdate(doc.from_date)
+#     year_start = date(start_date.year, 1, 1)
+#     year_end = date(start_date.year, 12, 31)
+
+#     # Query to check the number of Earned Leave applications for the employee in the current year
+#     leave_count = frappe.db.sql("""
+#         SELECT COUNT(*) AS count
+#         FROM `tabLeave Application`
+#         WHERE docstatus != 2
+#         AND employee = %s
+#         AND leave_type = 'Earned Leave'
+#         AND (
+#             (from_date BETWEEN %s AND %s) 
+#             OR (to_date BETWEEN %s AND %s) 
+#             OR (from_date <= %s AND to_date >= %s)
+#         )
+#     """, (doc.employee, year_start, year_end, year_start, year_end, year_start, year_end), as_dict=True)
+
+#     # Get the leave count
+#     leave_count = leave_count[0].get('count', 0)
+
+#     # Restrict if more than 3 Earned Leave applications exist
+#     if leave_count > 3:
+#         frappe.throw("Only 3 earned leave applications are allowed per year.")
+
+@frappe.whitelist()		
+def update_shift_status(doc,method):
+        s_status = att_shift_status_with_employee(doc.attendance_date, doc.attendance_date, doc.employee)
+        if doc.status == 'On Leave':
+            doc.shift_status=s_status
+            doc.in_time=''
+            doc.out_time=''
+            doc.shift=''
+            doc.total_working_hours="00:00:00"
+            doc.total_extra_hours="00:00:00"
+            doc.total_overtime_hours="00:00:00"
+            doc.early_exit_hours="00:00:00"
+            doc.late_entry_hours="00:00:00"
+
+@frappe.whitelist()
+def create_ledger():
+    att = frappe.new_doc("Attendance")
+    att.employee = 'TSIS/P028'
+    att.attendance_date = '2022-11-09'
+    att.shift_status = 'EL'
+    att.status='On Leave'
+    att.leave_application='HR-LAP-2024-00775'
+    att.leave_type='Earned Leave'
+    att.total_working_hours = "00:00:00"
+    att.working_hours = "0.0"
+    att.extra_hours = "0.0"
+    att.total_extra_hours = "00:00:00"
+    att.total_overtime_hours = "00:00:00"
+    att.early_exit_hours = "00:00:00"
+    att.late_entry_hours = "00:00:00"
+    att.overtime_hours = "0.0"
+    att.insert()
+    att.save(ignore_permissions=True)
+
+# @frappe.whitelist()
+# #send a mail alert if any scheduled job failed
+# def schedule_log_fail(doc,method):
+#     if doc.status=='Failed':
+#         message = """
+#         The schedule Job type <b>{}</b> is failed. <br>Kindly check the log <b>{}</b>
+#         """.format(doc.scheduled_job_type,doc.name)
+#         frappe.sendmail(
+#                 recipients=["erp@groupteampro.com"],
+#                 subject='Scheduled Job type failed (TSI)',
+#                 message=message
+#             )
+        
+@frappe.whitelist()
+def update_ot():
+    att=frappe.db.get_all("Attendance",{'attendance_date':('between',('2025-03-01','2025-03-29')),'docstatus':['!=',2],'overtime_hours':0,'overtime_request':['!=','']},['overtime_request','name'])
+    for a in att:
+        ot=a.overtime_request
+
+        frappe.db.set_value("Attendance",a.name,'overtime_request','')
+        doc=frappe.get_doc("Overtime Request",ot)
+        if doc.docstatus==0:
+            doc.delete()
+
+# import frappe
+# @frappe.whitelist()
+# def validate_overtime_reason_before_submit(doc, method):
+#     if doc.workflow_state == "L1 Pending" and not doc.reason:
+#         frappe.throw("Please enter a Job/Work before sending to Level 1 Approver.")
+#     if doc.reason and doc.workflow_state == "L1 Pending":
+#         doc.workflow_state = "L1 Pending"
+
+# import frappe        
+
+# @frappe.whitelist()
+# def validate_dh_reason_before_submit(doc, method):
+#     job_work_value = getattr(doc, "job__work", None)
+#     if doc.workflow_state == "L1 Pending" and not job_work_value:
+#         frappe.throw("Please enter a Job/Work before sending to Level 1 Approver.")
+#     if job_work_value and doc.workflow_state == "L1 Pending":
+#         doc.workflow_state = "L1 Pending"

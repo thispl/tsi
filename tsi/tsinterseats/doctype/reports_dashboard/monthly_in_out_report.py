@@ -389,9 +389,23 @@ def check_holiday(date,emp):
 	holiday = frappe.db.sql("""select `tabHoliday`.holiday_date,`tabHoliday`.weekly_off, `tabHoliday`.others from `tabHoliday List` 
 	left join `tabHoliday` on `tabHoliday`.parent = `tabHoliday List`.name where `tabHoliday List`.name = '%s' and holiday_date = '%s' """%(holiday_list,date),as_dict=True)
 	doj= frappe.db.get_value("Employee",{'name':emp},"date_of_joining")
+	relieving_date= frappe.db.get_value("Employee",{'name':emp},"relieving_date")
+	emp_status= frappe.db.get_value("Employee",{'name':emp},"status")
 	status = ''
 	if holiday :
 		if doj < holiday[0].holiday_date:
+			if holiday[0].weekly_off == 1:
+				status = "WH"     
+			else:
+				if holiday[0].others == "DH":
+					status = "DH"
+				elif holiday[0].others == "BH":
+					status = "BH"
+				elif holiday[0].others == "PH":
+					status = "PH"
+				elif holiday[0].others == "FH":
+					status = "FH"
+		elif relieving_date and emp_status !='Active' and (relieving_date > holiday[0].holiday_date):
 			if holiday[0].weekly_off == 1:
 				status = "WH"     
 			else:

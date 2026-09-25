@@ -16,10 +16,13 @@
   "employee_details_section",
   "employee",
   "employee_name",
+  "employee_category",
+  "cost_center",
   "job__work",
   "column_break_mxhht",
   "department",
   "designation",
+  "payroll_date_npd",
   "shift_details_section",
   "attendance",
   "shift",
@@ -27,13 +30,19 @@
   "working_time_finish",
   "column_break_qaght",
   "dh_allowance",
+  "shift_working_hours",
   "overtime_hours",
   "extra_hours",
   "total_working_hours",
+  "approvers_section",
+  "level_1_approver",
+  "level_2_approver",
+  "level_3_approver",
   "amended_from"
  ],
  "fields": [
   {
+   "allow_on_submit": 1,
    "fieldname": "dh_date",
    "fieldtype": "Date",
    "in_list_view": 1,
@@ -93,17 +102,21 @@
   {
    "fieldname": "working_time_start",
    "fieldtype": "Datetime",
-   "label": "Working Time Start"
+   "label": "Working Time Start",
+   "read_only": 1
   },
   {
    "fieldname": "working_time_finish",
    "fieldtype": "Datetime",
-   "label": "Working Time Finish"
+   "label": "Working Time Finish",
+   "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "total_working_hours",
    "fieldtype": "Time",
-   "label": "Total Working Hours"
+   "label": "Total Working Hours",
+   "permlevel": 1
   },
   {
    "fieldname": "amended_from",
@@ -115,6 +128,7 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "shift",
    "fieldtype": "Link",
    "label": "Shift",
@@ -138,6 +152,7 @@
    "reqd": 1
   },
   {
+   "allow_on_submit": 1,
    "default": "Today",
    "fieldname": "posting_date",
    "fieldtype": "Date",
@@ -154,31 +169,98 @@
    "fieldtype": "Section Break"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "attendance",
    "fieldtype": "Link",
    "label": "Attendance",
    "options": "Attendance"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "overtime_hours",
    "fieldtype": "Time",
-   "label": "Overtime Hours"
+   "label": "Overtime Hours",
+   "permlevel": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "extra_hours",
    "fieldtype": "Time",
-   "label": "Extra Hours"
+   "hidden": 1,
+   "label": "Extra Hours",
+   "permlevel": 1
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "dh_allowance",
    "fieldtype": "Currency",
-   "label": "DH Allowance"
+   "label": "DH Allowance",
+   "permlevel": 1
+  },
+  {
+   "fetch_from": "employee.employee_catagory",
+   "fetch_if_empty": 1,
+   "fieldname": "employee_category",
+   "fieldtype": "Link",
+   "label": "Employee Category",
+   "options": "Employee Catagory",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approvers_section",
+   "fieldtype": "Section Break",
+   "label": "Approvers"
+  },
+  {
+   "fetch_from": "employee.leave_approver",
+   "fetch_if_empty": 1,
+   "fieldname": "level_1_approver",
+   "fieldtype": "Link",
+   "label": "Level 1 Approver",
+   "options": "User"
+  },
+  {
+   "fetch_from": "employee.level_approver_2",
+   "fetch_if_empty": 1,
+   "fieldname": "level_2_approver",
+   "fieldtype": "Link",
+   "label": "Level 2 Approver",
+   "options": "User"
+  },
+  {
+   "fetch_from": "employee.level_approver_3",
+   "fetch_if_empty": 1,
+   "fieldname": "level_3_approver",
+   "fieldtype": "Link",
+   "label": "Level 3 Approver",
+   "options": "User"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "shift_working_hours",
+   "fieldtype": "Float",
+   "label": "Shift Working Hours",
+   "permlevel": 1
+  },
+  {
+   "fetch_from": "employee.payroll_cost_center",
+   "fetch_if_empty": 1,
+   "fieldname": "cost_center",
+   "fieldtype": "Link",
+   "label": "Cost Center",
+   "options": "Cost Center"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "payroll_date_npd",
+   "fieldtype": "Date",
+   "label": "Payroll Date NPD"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2024-02-15 12:16:40.001582",
+ "modified": "2026-08-01 12:54:21.443739",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "DH Approval",
@@ -201,5 +283,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }

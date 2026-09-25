@@ -9,7 +9,7 @@ class ResignationForm(Document):
     def on_submit(self):
         if self.workflow_state == 'Approved':
             # frappe.db.set_value('Employee', self.employee,'relieving_date', self.relieving_date)
-            if not frappe.db.exists('No Due Form', {'employee': self.project_name}):
+            if not frappe.db.exists('No Due Form', {'employee': self.name}):
                 form = frappe.new_doc('No Due Form')
                 form.employee = self.employee
                 form.employee_name = self.employee_name

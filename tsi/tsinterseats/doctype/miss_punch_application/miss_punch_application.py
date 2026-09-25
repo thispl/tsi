@@ -27,7 +27,7 @@ status_map = {
 class MissPunchApplication(Document):
 
 	def on_submit(self):
-		frappe.errprint("Hii")
+		# actual in and out will be reflected to the attendance
 		att = frappe.db.exists('Attendance',{'attendance_date':self.date,'employee':self.employee,'docstatus':('!=',2)})
 		if att:
 			frappe.errprint("Hello")

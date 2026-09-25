@@ -135,9 +135,9 @@ def data1(args):
 				`tabSalary Slip`.end_date <= '{args.end_date}'
 		""", as_dict=True)[0].gross
 
-		pf = get_salary_component_total('Provident Fund')
+		pf = get_salary_component_total('PF')
 		pt = get_salary_component_total('Professional Tax')
-		esi = get_salary_component_total('Employee State Insurance')
+		esi = get_salary_component_total('ESI')
 		lwf = get_salary_component_total('LWF')
 		sd = get_salary_component_total('salary Deduction')
 

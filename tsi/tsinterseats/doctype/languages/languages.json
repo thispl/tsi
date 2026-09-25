@@ -20,7 +20,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2023-08-03 17:57:10.684727",
+ "modified": "2024-10-25 17:53:26.905059",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "Languages",
@@ -42,5 +42,6 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "track_changes": 1
 }
