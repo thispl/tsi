@@ -18,12 +18,8 @@ class EarlyOut(Document):
         count=0
         if isinstance(self.permission_date, str):
             self.permission_date = datetime.strptime(self.permission_date, "%Y-%m-%d").date()
-        if self.permission_date.day < 26:
-            month_start = (self.permission_date - relativedelta(months=1)).replace(day=26)
-            month_end = self.permission_date.replace(day=25)
-        else:
-            month_start = self.permission_date.replace(day=26)
-            month_end = (self.permission_date + relativedelta(months=1)).replace(day=25)
+        month_start = get_first_day(self.permission_date)
+        month_end = get_last_day(self.permission_date)
         late_permission = frappe.db.get_all('Late Entry',{'employee':self.employee,'docstatus':['!=',2],"permission_date": ('between',(month_start,month_end))},['*'])
         for late in late_permission:
             count+=1

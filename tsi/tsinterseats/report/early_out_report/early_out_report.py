@@ -42,28 +42,30 @@ def get_columns():
 def get_attendance(filters):
 	data = []
 	if filters.employee:
-		attendance = frappe.db.sql("""select * from `tabAttendance` where attendance_date between '%s' and '%s' and employee = '%s' order by attendance_date,employee ASC"""%(filters.from_date,filters.to_date,filters.employee),as_dict = True)
+		attendance = frappe.db.sql("""select attendance_date, employee, employee_name, shift, out_time from `tabAttendance` where attendance_date between %(from_date)s and %(to_date)s and employee = %(employee)s and shift != '' and out_time is not null order by attendance_date,employee ASC""",{"from_date":filters.from_date,"to_date":filters.to_date,"employee":filters.employee},as_dict = True)
 	else:
-		attendance = frappe.db.sql("""select * from `tabAttendance` where attendance_date between '%s' and '%s'  order by attendance_date,employee ASC"""%(filters.from_date,filters.to_date),as_dict = True)
+		attendance = frappe.db.sql("""select attendance_date, employee, employee_name, shift, out_time from `tabAttendance` where attendance_date between %(from_date)s and %(to_date)s and shift != '' and out_time is not null order by attendance_date,employee ASC""",{"from_date":filters.from_date,"to_date":filters.to_date},as_dict = True)
+	shift_map = {d.name: d.end_time for d in frappe.get_all("Shift Type", fields=["name", "end_time"])}
 	for att in attendance:
 		if att.shift and att.out_time:
-			if att.shift and att.out_time:
-				shift_time = frappe.get_value("Shift Type",{'name':att.shift},["end_time"])
-				get_time = datetime.strptime(str(shift_time),'%H:%M:%S').strftime('%H:%M:%S')
-				shift_start_time = dt.datetime.strptime(str(get_time),"%H:%M:%S")
-				start_time = dt.datetime.combine(att.attendance_date,shift_start_time.time())
-				st_time = start_time.strftime('%H:%M:%S')
-				at_time = att.out_time.strftime('%H:%M:%S')
-				if att.out_time < start_time:
-					late_time =  start_time - att.out_time
-					row = [
-					format_date(att.attendance_date),
-					att.employee,
-					att.employee_name,
-					att.shift,
-					st_time,
-					at_time,
-					late_time]
-					data.append(row)
-	
+			shift_time = shift_map.get(att.shift)
+			if not shift_time:
+				continue
+			get_time = datetime.strptime(str(shift_time),'%H:%M:%S').strftime('%H:%M:%S')
+			shift_start_time = dt.datetime.strptime(str(get_time),"%H:%M:%S")
+			start_time = dt.datetime.combine(att.attendance_date,shift_start_time.time())
+			st_time = start_time.strftime('%H:%M:%S')
+			at_time = att.out_time.strftime('%H:%M:%S')
+			if att.out_time < start_time:
+				late_time =  start_time - att.out_time
+				row = [
+				format_date(att.attendance_date),
+				att.employee,
+				att.employee_name,
+				att.shift,
+				st_time,
+				at_time,
+				late_time]
+				data.append(row)
+
 	return data

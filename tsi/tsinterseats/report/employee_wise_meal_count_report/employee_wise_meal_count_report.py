@@ -22,69 +22,66 @@ def get_columns():
 
 def get_data(filters):
 	data = []
-	from_date = datetime.strptime(filters.get('from_date'), '%Y-%m-%d').date()
-	to_date = datetime.strptime(filters.get('to_date'), '%Y-%m-%d').date()
 	employee = filters.get('employee')
-	current_date = from_date
-	while current_date <= to_date:
-		query = """
-			SELECT
-				`tabCanteen Coupons`.date,
-				`tabCanteen Coupons`.employee,
-				`tabCanteen Coupons`.employee_name,
-				`tabFood Items`.item,
-				SUM(`tabFood Items`.status) AS count
-			FROM
-				`tabCanteen Coupons`
-			LEFT JOIN
-				`tabFood Items` ON `tabCanteen Coupons`.name = `tabFood Items`.parent
-			WHERE
-				`tabCanteen Coupons`.date = %s
-		"""
-		params = [current_date]
+	params = {"from_date": filters.get('from_date'), "to_date": filters.get('to_date')}
 
-		if employee:
-			query += " AND `tabCanteen Coupons`.employee = %s"
-			params.append(employee)
+	query = """
+		SELECT
+			`tabCanteen Coupons`.date,
+			`tabCanteen Coupons`.employee,
+			`tabCanteen Coupons`.employee_name,
+			`tabFood Items`.item,
+			SUM(`tabFood Items`.status) AS count
+		FROM
+			`tabCanteen Coupons`
+		LEFT JOIN
+			`tabFood Items` ON `tabCanteen Coupons`.name = `tabFood Items`.parent
+		WHERE
+			`tabCanteen Coupons`.date BETWEEN %(from_date)s AND %(to_date)s
+	"""
 
-		query += """
-			GROUP BY
-				`tabCanteen Coupons`.date,
-				`tabCanteen Coupons`.employee,
-				`tabCanteen Coupons`.employee_name,
-				`tabFood Items`.item
-		"""
+	if employee:
+		query += " AND `tabCanteen Coupons`.employee = %(employee)s"
+		params["employee"] = employee
 
-		c = frappe.db.sql(query, tuple(params), as_dict=True)
-		employee_data = {}
-		for row in c:
-			employee_id = row['employee']
-			employee_name = row['employee_name']
-			item = row['item']
-			count = row['count']
+	query += """
+		GROUP BY
+			`tabCanteen Coupons`.date,
+			`tabCanteen Coupons`.employee,
+			`tabCanteen Coupons`.employee_name,
+			`tabFood Items`.item
+		ORDER BY
+			`tabCanteen Coupons`.date ASC
+	"""
 
-			if employee_id not in employee_data:
-				employee_data[employee_id] = {
-					'employee_name': employee_name,
-					'items': {item: count},
-					'total': 0
-				}
+	c = frappe.db.sql(query, params, as_dict=True)
+	items = frappe.db.sql("""SELECT name FROM `tabFood Menu` ORDER BY serial_no ASC""", as_dict=True)
+
+	employee_data = {}
+	for row in c:
+		key = (row['date'], row['employee'])
+		item = row['item']
+		count = row['count'] or 0
+
+		if key not in employee_data:
+			employee_data[key] = {
+				'employee_name': row['employee_name'],
+				'items': {item: count},
+				'total': 0
+			}
+		else:
+			if item not in employee_data[key]['items']:
+				employee_data[key]['items'][item] = count
 			else:
-				if item not in employee_data[employee_id]['items']:
-					employee_data[employee_id]['items'][item] = count
-				else:
-					employee_data[employee_id]['items'][item] += count
+				employee_data[key]['items'][item] += count
 
-			employee_data[employee_id]['total'] += count
+		employee_data[key]['total'] += count
 
-		items = frappe.db.sql("""SELECT name FROM `tabFood Menu` ORDER BY serial_no ASC""", as_dict=True)
-
-		for employee_id, emp_data in employee_data.items():
-			row = [current_date, employee_id, emp_data['employee_name']]
-			for item in items:
-				row.append(emp_data['items'].get(item.name, 0))
-			row.append(emp_data['total'])
-			data.append(row)
-		current_date += timedelta(days=1)
+	for (date, employee_id), emp_data in employee_data.items():
+		row = [date, employee_id, emp_data['employee_name']]
+		for item in items:
+			row.append(emp_data['items'].get(item.name, 0))
+		row.append(emp_data['total'])
+		data.append(row)
 
 	return data

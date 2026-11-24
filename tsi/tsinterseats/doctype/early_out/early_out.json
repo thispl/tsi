@@ -43,7 +43,8 @@
   "column_break_hcxrb",
   "level_2",
   "amended_from",
-  "level_3"
+  "level_3",
+  "approver_reason"
  ],
  "fields": [
   {
@@ -265,12 +266,17 @@
    "fieldtype": "Link",
    "label": "Level 3",
    "options": "User"
+  },
+  {
+   "fieldname": "approver_reason",
+   "fieldtype": "Small Text",
+   "label": "Approver Reason"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-07-30 17:17:51.010352",
+ "modified": "2026-11-19 18:37:56.316332",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "Early Out",

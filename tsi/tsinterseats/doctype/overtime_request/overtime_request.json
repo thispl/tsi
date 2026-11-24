@@ -39,7 +39,8 @@
   "ot_level_1_approver",
   "ot_level_2_approver",
   "column_break_koodp",
-  "ot_level_3_approver"
+  "ot_level_3_approver",
+  "approver_reason"
  ],
  "fields": [
   {
@@ -278,12 +279,17 @@
    "fieldtype": "Link",
    "label": "Cost Center",
    "options": "Cost Center"
+  },
+  {
+   "fieldname": "approver_reason",
+   "fieldtype": "Small Text",
+   "label": "Approver Reason"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-11 17:07:30.837324",
+ "modified": "2026-11-19 18:37:57.681604",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "Overtime Request",

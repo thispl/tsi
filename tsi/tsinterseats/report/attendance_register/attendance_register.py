@@ -52,6 +52,41 @@ def get_data(filters):
 	data = []
 	row = []
 	employees = get_employees(filters)
+	dates = get_dates(filters)
+
+	emp_names = [e.name for e in employees]
+	holiday_lists = tuple({e.holiday_list for e in employees if e.holiday_list})
+
+	attendance_map = {}
+	holiday_map = {}
+	if emp_names:
+		for a in frappe.db.sql(
+			"""
+			SELECT employee, attendance_date, shift_status
+			FROM `tabAttendance`
+			WHERE docstatus != 2
+			  AND attendance_date BETWEEN %(start_date)s AND %(end_date)s
+			  AND employee IN %(emp_names)s
+			ORDER BY docstatus DESC, modified DESC
+			""",
+			{"start_date": filters.start_date, "end_date": filters.end_date, "emp_names": tuple(emp_names)},
+			as_dict=True,
+		):
+			attendance_map.setdefault((a.employee, getdate(a.attendance_date)), a.shift_status)
+
+	if holiday_lists:
+		for h in frappe.db.sql(
+			"""
+			SELECT parent, holiday_date, weekly_off, others
+			FROM `tabHoliday`
+			WHERE parent IN %(holiday_lists)s
+			  AND holiday_date BETWEEN %(start_date)s AND %(end_date)s
+			""",
+			{"holiday_lists": holiday_lists, "start_date": filters.start_date, "end_date": filters.end_date},
+			as_dict=True,
+		):
+			holiday_map.setdefault((h.parent, getdate(h.holiday_date)), h)
+
 	tdcnt =0 
 	tpds = 0
 	twh=0
@@ -68,7 +103,6 @@ def get_data(filters):
 	for e in employees:
 		row=[]
 		row += [e.name,e.employee_name,e.department]
-		dates=get_dates(filters)
 		cnt = 0
 		pd=0
 		wh=0
@@ -84,8 +118,9 @@ def get_data(filters):
 		tpd=0
 
 		for date in dates:
-			if frappe.db.exists("Attendance",{'attendance_date':date,'employee':e.name,'docstatus':('!=','2')}):
-				att = frappe.db.get_value("Attendance",{'attendance_date':date,'employee':e.name},['shift_status'])
+			date_obj = getdate(date)
+			if (e.name, date_obj) in attendance_map:
+				att = attendance_map[(e.name, date_obj)]
 				if att:
 					row.append(att)
 					if att =="P":
@@ -120,7 +155,7 @@ def get_data(filters):
 				else:
 					row.append('-')
 			else:
-				hh = check_holiday(date,e.name)
+				hh = check_holiday(date_obj,e,holiday_map)
 				row.append(hh)
 				if hh == "WH":
 					wh+=1
@@ -182,7 +217,7 @@ def get_data(filters):
 	row1.append(tsat)
 	row1.append(tlop)
 	row1.append(ttpd)
-	row1.append([''])
+	row1.append('')
 	data.append(row1)
 	return data
 
@@ -191,24 +226,22 @@ def get_dates(filters):
 	dates = [add_days(filters['start_date'], i) for i in range(0, no_of_days)]
 	return dates
 
-def check_holiday(date,e):
-	holiday_list = frappe.db.get_value('Employee',{'name':e},'holiday_list')
-	holiday = frappe.db.sql("""select `tabHoliday`.holiday_date,`tabHoliday`.weekly_off, `tabHoliday`.others from `tabHoliday List` 
-	left join `tabHoliday` on `tabHoliday`.parent = `tabHoliday List`.name where `tabHoliday List`.name = '%s' and holiday_date = '%s' """%(holiday_list,date),as_dict=True)
-	doj= frappe.db.get_value("Employee",{'name':e},"date_of_joining")
+def check_holiday(date_obj,e,holiday_map):
+	holiday = holiday_map.get((e.holiday_list, date_obj))
+	doj = e.date_of_joining
 	status = ''
 	if holiday :
-		if doj < holiday[0].holiday_date:
-			if holiday[0].weekly_off == 1:
+		if doj < holiday.holiday_date:
+			if holiday.weekly_off == 1:
 				status = "WH"     
 			else:
-				if holiday[0].others == "DH":
+				if holiday.others == "DH":
 					status = "DH"
-				elif holiday[0].others == "BH":
+				elif holiday.others == "BH":
 					status = "BH"
-				elif holiday[0].others == "PH":
+				elif holiday.others == "PH":
 					status = "PH"
-				elif holiday[0].others == "FH":
+				elif holiday.others == "FH":
 					status = "FH"
 		else:
 			status = '*'
@@ -216,15 +249,11 @@ def check_holiday(date,e):
 
 def get_employees(filters):
 	conditions = ''
-	frappe.errprint(filters)
-	left_employees = []
 	if filters.employee:
-		conditions += "and employee = '%s' " % (filters.employee)
+		conditions += "and name = '%s' " % (filters.employee)
 	if filters.department:
 		conditions += "and department = '%s' "%(filters.department)
 	if filters.employee_catagory:
 		conditions += "and employee_catagory = '%s' " %(filters.employee_catagory)
 	employees = frappe.db.sql("""select * from `tabEmployee` where status = 'Active' %s order by name ASC""" % (conditions), as_dict=True)
-	left_employees = frappe.db.sql("""select * from `tabEmployee` where status = 'Left' and relieving_date >= '%s'  %s order by name ASC""" %(filters.from_date,conditions),as_dict=True)
-	# employees.extend(left_employees)
 	return employees

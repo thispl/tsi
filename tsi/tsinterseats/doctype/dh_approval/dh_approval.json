@@ -38,7 +38,8 @@
   "level_1_approver",
   "level_2_approver",
   "level_3_approver",
-  "amended_from"
+  "amended_from",
+  "approver_reason"
  ],
  "fields": [
   {
@@ -255,12 +256,17 @@
    "fieldname": "payroll_date_npd",
    "fieldtype": "Date",
    "label": "Payroll Date NPD"
+  },
+  {
+   "fieldname": "approver_reason",
+   "fieldtype": "Small Text",
+   "label": "Approver Reason"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-08-01 12:54:21.443739",
+ "modified": "2026-11-19 18:37:56.057832",
  "modified_by": "Administrator",
  "module": "tsinterseats",
  "name": "DH Approval",

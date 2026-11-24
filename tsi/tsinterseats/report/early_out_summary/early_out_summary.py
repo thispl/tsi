@@ -36,64 +36,52 @@ def get_columns():
 
 def get_early(filters):
     data = []
-    early_out = []    
+    params = {"from_date": filters.from_date, "to_date": filters.to_date}
     if filters.employee and not filters.department:
-        query = """SELECT MIN(permission_date) as permission_date, employee 
-                    FROM `tabEarly Out` 
-                    WHERE permission_date BETWEEN '%s' AND '%s' 
-                    AND employee = '%s' 
-                    AND docstatus = 1 
-                    GROUP BY employee 
-                    ORDER BY permission_date""" % (filters.from_date, filters.to_date, filters.employee)
-
+        cond = "AND employee = %(employee)s AND docstatus = 1"
+        params["employee"] = filters.employee
     elif not filters.employee and filters.department:
-        query = """SELECT MIN(permission_date) as permission_date, employee 
-                    FROM `tabEarly Out` 
-                    WHERE permission_date BETWEEN '%s' AND '%s' 
-                    AND department = '%s' 
-                    AND workflow_state = 'Approved' 
-                    GROUP BY employee 
-                    ORDER BY permission_date""" % (filters.from_date, filters.to_date, filters.department)
-
+        cond = "AND department = %(department)s AND workflow_state = 'Approved'"
+        params["department"] = filters.department
     elif filters.employee and filters.department:
-        query = """SELECT MIN(permission_date) as permission_date, employee 
-                    FROM `tabEarly Out` 
-                    WHERE permission_date BETWEEN '%s' AND '%s' 
-                    AND employee = '%s' 
-                    AND department = '%s' 
-                    AND workflow_state = 'Approved' 
-                    GROUP BY employee 
-                    ORDER BY permission_date""" % (filters.from_date, filters.to_date, filters.employee, filters.department)
-
+        cond = "AND employee = %(employee)s AND department = %(department)s AND workflow_state = 'Approved'"
+        params["employee"] = filters.employee
+        params["department"] = filters.department
     else:
-        query = """SELECT MIN(permission_date) as permission_date, employee 
-                    FROM `tabEarly Out` 
-                    WHERE permission_date BETWEEN '%s' AND '%s' 
-                    AND workflow_state = 'Approved' 
-                    GROUP BY employee 
-                    ORDER BY permission_date""" % (filters.from_date, filters.to_date)
+        cond = "AND workflow_state = 'Approved'"
 
+    early_out = frappe.db.sql(
+        """SELECT MIN(permission_date) as permission_date, employee
+        FROM `tabEarly Out`
+        WHERE permission_date BETWEEN %(from_date)s AND %(to_date)s {cond}
+        GROUP BY employee
+        ORDER BY permission_date""".format(cond=cond),
+        params, as_dict=True)
 
-    early_out = frappe.db.sql(query, as_dict=True)
+    stats = {}
+    for r in frappe.db.sql(
+        """SELECT employee, COUNT(*) as cnt, SUM(`out`) as tot
+        FROM `tabEarly Out`
+        WHERE permission_date BETWEEN %(from_date)s AND %(to_date)s
+            AND workflow_state = 'Approved'
+            AND employee IN %(emps)s
+        GROUP BY employee""",
+        {"from_date": filters.from_date, "to_date": filters.to_date,
+         "emps": tuple(ea.employee for ea in early_out) or ("",)},
+        as_dict=True):
+        stats[r.employee] = r
+
+    emp_map = {e.name: e for e in frappe.get_all("Employee",
+        filters={"name": ("in", [ea.employee for ea in early_out])},
+        fields=["name", "employee_name", "designation", "department"])} if early_out else {}
+
     for ea in early_out:
-        tot = 0
-        count = frappe.db.count("Early Out", {
-            'employee': ea.employee,
-            'permission_date': ['Between', (filters.from_date, filters.to_date)],
-            'workflow_state': 'Approved'
-        })
-        emp_name = frappe.db.get_value("Employee", {'name': ea.employee}, ['employee_name'])
-        desig = frappe.db.get_value("Employee", {'name': ea.employee}, ['designation'])
-        dep = frappe.db.get_value("Employee", {'name': ea.employee}, ['department'])
-        etime = frappe.db.get_all("Early Out", {
-            'employee': ea.employee,
-            'permission_date': ['Between', (filters.from_date, filters.to_date)],
-            'workflow_state': 'Approved'
-        }, ['*'])
-        for e in etime:
-            tot += int(e.out)  
-        row = [ea.employee, emp_name, dep, desig, count, tot]    
+        s = stats.get(ea.employee)
+        emp = emp_map.get(ea.employee, frappe._dict())
+        count = s.cnt if s else 0
+        tot = s.tot if s and s.tot else 0
+        row = [ea.employee, emp.get("employee_name"), emp.get("department"), emp.get("designation"), count, tot]
         data.append(row)
-    
+
     return data
 

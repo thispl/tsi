@@ -106,8 +106,85 @@ def get_data(filters):
     # row.append("")
     data.append(row)
     employees = get_employees(filters)
+
+    emp_names = [e.name for e in employees]
+    holiday_lists = tuple({e.holiday_list for e in employees if e.holiday_list})
+
+    attendance_map = {}
+    holiday_map = {}
+    od_map = {}
+    coff_map = {}
+    shift_times = {
+        s.name: s
+        for s in frappe.get_all("Shift Type", fields=["name", "start_time", "end_time"])
+    }
+
+    if emp_names:
+        sql_values = {
+            "from_date": filters.from_date,
+            "to_date": filters.to_date,
+            "emp_names": tuple(emp_names),
+        }
+        for a in frappe.db.sql(
+            """
+            SELECT name, employee, attendance_date, shift_status, shift,
+                   in_time, out_time, working_hours, status, leave_type,
+                   on_duty_application, session_from_time, session_to_time,
+                   late_entry_application, early_exit_application, overtime_hours
+            FROM `tabAttendance`
+            WHERE docstatus != 2
+              AND attendance_date BETWEEN %(from_date)s AND %(to_date)s
+              AND employee IN %(emp_names)s
+            ORDER BY docstatus DESC, modified DESC
+            """,
+            sql_values,
+            as_dict=True,
+        ):
+            attendance_map.setdefault((a.employee, getdate(a.attendance_date)), a)
+
+        for od in frappe.db.sql(
+            """
+            SELECT employee, session FROM `tabOn Duty Application`
+            WHERE docstatus = 1
+              AND od_date BETWEEN %(from_date)s AND %(to_date)s
+              AND employee IN %(emp_names)s
+            """,
+            sql_values,
+            as_dict=True,
+        ):
+            od_map.setdefault(od.employee, []).append(od)
+
+        for c in frappe.db.sql(
+            """
+            SELECT employee, COUNT(name) AS coff FROM `tabLeave Application`
+            WHERE docstatus = 1 AND leave_type = 'Compensatory Off'
+              AND from_date BETWEEN %(from_date)s AND %(to_date)s
+              AND employee IN %(emp_names)s
+            GROUP BY employee
+            """,
+            sql_values,
+            as_dict=True,
+        ):
+            coff_map[c.employee] = c.coff
+
+    if holiday_lists:
+        for h in frappe.db.sql(
+            """
+            SELECT parent, holiday_date, weekly_off, others
+            FROM `tabHoliday`
+            WHERE parent IN %(holiday_lists)s
+              AND holiday_date BETWEEN %(from_date)s AND %(to_date)s
+            """,
+            {
+                "holiday_lists": holiday_lists,
+                "from_date": filters.from_date,
+                "to_date": filters.to_date,
+            },
+            as_dict=True,
+        ):
+            holiday_map.setdefault((h.parent, getdate(h.holiday_date)), h)
+
     for emp in employees:
-        dates = get_dates(filters.from_date, filters.to_date)
         row1 = [emp.name, emp.employee_name, emp.department, emp.designation, emp.date_of_joining, "Status"]
         row2 = ["", "", "", "", "", "Shift"]
         row3 = ["", "", "", "", "", "In Time"]
@@ -138,13 +215,11 @@ def get_data(filters):
         total_fh = 0
         total_dh = 0
         tw_days = 0
-        doj = frappe.db.get_value("Employee", {'name': emp.name}, "date_of_joining")
-        relieving_date = frappe.db.get_value("Employee",{'name': emp.name}, "relieving_date")
-        doj = getdate(doj)
-        relieving_date = getdate(relieving_date)
+        doj = getdate(emp.date_of_joining) if emp.date_of_joining else None
+        relieving_date = getdate(emp.relieving_date) if emp.relieving_date else None
         for date in dates:
             date_obj = getdate(date)
-            if (doj and doj > date_obj):
+            if (doj and doj > date_obj) or (relieving_date and relieving_date < date_obj):
                 row1.append('-')
                 row2.append('-')
                 row3.append('-')
@@ -154,19 +229,8 @@ def get_data(filters):
                 row7.append('-')
                 row8.append('-')
                 continue  
-            elif (doj and doj < date_obj) and relieving_date:
-                if relieving_date < date_obj:
-                    row1.append('-')
-                    row2.append('-')
-                    row3.append('-')
-                    row4.append('-')
-                    row5.append('-')
-                    row6.append('-')
-                    row7.append('-')
-                    row8.append('-')
-                    continue  
-            if frappe.db.exists("Attendance", {'attendance_date': date, 'employee': emp.name, 'docstatus': ('!=', '2')}):
-                att = frappe.get_doc("Attendance",{'attendance_date':date,'employee':emp.name,'docstatus':('!=','2')})
+            att = attendance_map.get((emp.name, date_obj))
+            if att:
                 shift_status = att.shift_status
                 shift = att.shift
                 in_time = att.in_time
@@ -175,7 +239,7 @@ def get_data(filters):
                 working_hours = att.working_hours
                 status = att.status
                 leave_type = att.leave_type
-                if status == "On Leave" and leave_type!='':
+                if status == "On Leave" and leave_type:
                     if leave_type == "Casual Leave":
                         row1.append("CL")
                         total_paid_leave +=1
@@ -202,13 +266,15 @@ def get_data(filters):
                         row1.append("ML")
                         total_paid_leave +=1
                         tw_days+=1
-                elif status == "On Leave" and leave_type=='':	
+                    else:
+                        row1.append(leave_type)
+                elif status == "On Leave":
                     row1.append("AB")
                     total_absent +=1
                 else:
                     if shift_status:
                         if shift_status and "WW" in shift_status:
-                            hh = check_holiday(date, emp.name)
+                            hh = check_holiday(date_obj, emp, holiday_map)
                             if hh:
                                 if hh!='*':
                                     shift_status=hh
@@ -356,84 +422,58 @@ def get_data(filters):
                     row2.append('-')
                 if in_time is not None:
                     in_tim = in_time.strftime('%H:%M')
-
                 else:
-                    if att.on_duty_application:
-                        in_tim=att.session_from_time
-                    else:
-                        in_tim = '-'
+                    in_tim = format_hhmm(att.session_from_time) if att.on_duty_application else '-'
                 if out_time is not None:
                     out_tim = out_time.strftime('%H:%M')
                 else:
-                    if att.on_duty_application:
-                        out_tim=att.session_to_time
-                    else:
-                        out_tim = ''
+                    out_tim = format_hhmm(att.session_to_time) if att.on_duty_application else ''
                 row3.append(in_tim)
                 row4.append(out_tim)
 
-                late_time = 0
                 if shift and in_time:
                     if att.late_entry_application:
                         row5.append(att.late_entry_application)
-                    else:
-                        shift_time = frappe.get_value("Shift Type",{'name':att.shift},["start_time"])
+                    elif shift_times.get(shift):
+                        shift_time = shift_times[shift].start_time
                         get_time = datetime.strptime(str(shift_time),'%H:%M:%S').strftime('%H:%M:%S')
                         shift_start_time = dt.datetime.strptime(str(get_time),"%H:%M:%S")
                         start_time = dt.datetime.combine(att.attendance_date,shift_start_time.time())
-                        if in_time > start_time:
-                            late_time = in_time - start_time
-                        else:
-                            late_time = "-"
+                        late_time = in_time - start_time if in_time > start_time else "-"
                         row5.append(str(late_time))
+                    else:
+                        row5.append("-")
                 else:
-                    late_time = "-"
-                    row5.append(str(late_time))
+                    row5.append("-")
                 
-                early_out = 0
                 if shift and out_time:
                     if att.early_exit_application:
                         row6.append(att.early_exit_application)
-
-                    else:
-                        shift_time = frappe.get_value("Shift Type", {'name': shift}, ["end_time"])
+                    elif shift_times.get(shift):
+                        shift_time = shift_times[shift].end_time
                         get_time = datetime.strptime(str(shift_time), '%H:%M:%S').strftime('%H:%M:%S')
                         shift_end_time = dt.datetime.strptime(str(get_time), "%H:%M:%S")
                         end_time = dt.datetime.combine(att.attendance_date, shift_end_time.time())
-                        if out_time < end_time:
-                            early_out = end_time - out_time
-                        else:
-                            early_out = "-"
+                        early_out = end_time - out_time if out_time < end_time else "-"
                         row6.append(str(early_out))
-                else:
-                    early_out = "-"
-                    row6.append(str(early_out))
-
-                row7.append(working_hours)
-                
-                if att.get('shift_status') == "P/WW" or att.get('shift_status') == "P/PH" or att.get('shift_status') == "P/NPD" or att.get('shift_status') == "P/FH" or att.get('shift_status') == "P/BH":
-                    # ot_hours=(att.get(overtime_hours))
-                    if att.get('shift_status') == "P/FH":
-                        row8.append(att.get('overtime_hours', '-'))
-                        total_ot +=att.get('overtime_hours')
-                        total_fh += 1
-                    elif att.get('shift_status') == "P/NPD":
-                        row8.append(att.get('overtime_hours', '-'))
-                        total_ot += att.get('overtime_hours')
-                        # total_dh += 1
                     else:
-                        row8.append(att.get('overtime_hours', '-'))
-                        total_ot += att.get('overtime_hours')
-                elif att.get('shift_status') == "AB":
-                    row8.append(att.get('overtime_hours', '-'))
-                    total_ot += 0
+                        row6.append("-")
                 else:
-                    row8.append(att.get('overtime_hours', '-'))
-                    total_ot += att.get('overtime_hours')
+                    row6.append("-")
+
+                row7.append(round(working_hours, 2) if working_hours is not None else '-')
+
+                raw_status = att.get('shift_status')
+                overtime = att.get('overtime_hours')
+                row8.append(overtime if overtime is not None else '-')
+                if raw_status != "AB":
+                    total_ot += overtime or 0
+                if raw_status == "P/FH":
+                    total_fh += 1
                 
         
             else:
-                hh = check_holiday(date, emp.name)
+                hh = check_holiday(date_obj, emp, holiday_map)
                 if hh:
                     if hh!='*':
                         row1.append(hh)
@@ -467,7 +507,7 @@ def get_data(filters):
                 elif hh == "FH":
                     total_fhh += 1
         
-        total_od = frappe.db.sql("""select * from `tabOn Duty Application` where docstatus = 1 and od_date between '%s' and '%s' and employee = '%s'"""%(filters.from_date, filters.to_date, emp.name), as_dict=True)
+        total_od = od_map.get(emp.name, [])
         for od in total_od:
             if od.session == "Full day":
                 total_od1 +=1
@@ -477,9 +517,8 @@ def get_data(filters):
             elif od.session == "Flexible":
                 total_od1 +=1
 
-        total_combo_off = frappe.db.sql("""select count(name) as coff from `tabLeave Application` where docstatus = 1 and from_date between '%s' and '%s' and employee = '%s' and leave_type = 'Compensatory Off' """%(filters.from_date, filters.to_date, emp.name), as_dict=True)
+        total_combo_off = coff_map.get(emp.name, 0)
         row1.append(total_present)
-        frappe.errprint(total_present)
         row2.append('-')
         row3.append('-')
         row4.append('-')
@@ -551,7 +590,7 @@ def get_data(filters):
         row6.append('-')
         row7.append('-')
         row8.append('-')
-        row1.append(total_combo_off[0]['coff'])
+        row1.append(total_combo_off)
         row2.append('-')
         row3.append('-')
         row4.append('-')
@@ -671,8 +710,7 @@ def get_data(filters):
         row6.append('-')
         row7.append('-')
         row8.append('-')
-        frappe.errprint(total_holiday)
-        tw_days += (total_present + total_weekoff + total_holiday+total_bhh+total_fhh+total_phh +total_od1 +total_cl+total_sl+total_el+total_combo_off[0]['coff'])
+        tw_days += (total_present + total_weekoff + total_holiday+total_bhh+total_fhh+total_phh +total_od1 +total_cl+total_sl+total_el+total_combo_off)
         row1.append(tw_days)
         row2.append('-')
         row3.append('-')
@@ -696,57 +734,47 @@ def get_dates(from_date,to_date):
     dates = [add_days(from_date, i) for i in range(0, no_of_days)]
     return dates
 
-def check_holiday(date, emp):
-    holiday_list_name = frappe.db.get_value("Employee",{'name':emp},['holiday_list'])
-    query = """
-        SELECT
-            `tabHoliday`.holiday_date,
-            `tabHoliday`.weekly_off,
-            `tabHoliday`.others
-        FROM
-            `tabHoliday List`
-        LEFT JOIN
-            `tabHoliday` ON `tabHoliday`.parent = `tabHoliday List`.name
-        WHERE
-            `tabHoliday List`.name = %s AND holiday_date = %s
-    """
+def format_hhmm(value):
+    if value is None:
+        return '-'
+    if isinstance(value, timedelta):
+        total_seconds = int(value.total_seconds())
+        return "%02d:%02d" % (total_seconds // 3600, (total_seconds % 3600) // 60)
+    return value.strftime('%H:%M')
 
-    holiday = frappe.db.sql(query, (holiday_list_name, date), as_dict=True)
-
-    doj = frappe.db.get_value("Employee", {'name': emp}, "date_of_joining")
-    relieving_date = frappe.db.get_value("Employee",{'name': emp}, "relieving_date")
+def check_holiday(date_obj, emp, holiday_map):
+    holiday = holiday_map.get((emp.holiday_list, date_obj))
+    doj = emp.date_of_joining
+    relieving_date = emp.relieving_date
     status = ''
     if holiday:
         if relieving_date:
-            if (doj and doj < holiday[0].holiday_date) and (relieving_date and relieving_date > holiday[0].holiday_date):
-                frappe.log_error(f"Relieving Date for Employee {emp}: {type(relieving_date)}")
-                # frappe.log_error(f"Holiday Date for Employee {emp}: {type(holiday[0].holiday_date)}")
-                if holiday[0].weekly_off == 1:
+            if (doj and doj < holiday.holiday_date) and (relieving_date > holiday.holiday_date):
+                if holiday.weekly_off == 1:
                     status = "WH"
                 else:
-                    if holiday[0].others == "DH":
+                    if holiday.others == "DH":
                         status = "NPD"
-                    elif holiday[0].others == "BH":
+                    elif holiday.others == "BH":
                         status = "BH"
-                    elif holiday[0].others == "PH":
+                    elif holiday.others == "PH":
                         status = "PH"
-                    elif holiday[0].others == "FH":
+                    elif holiday.others == "FH":
                         status = "FH"
             else:
-                frappe.log_error(f"Holiday Date for Employee {emp}: {type(holiday[0].holiday_date)}")
                 status = '*'
         else:
-            if doj and doj < holiday[0].holiday_date:
-                if holiday[0].weekly_off == 1:
+            if doj and doj < holiday.holiday_date:
+                if holiday.weekly_off == 1:
                     status = "WH"
                 else:
-                    if holiday[0].others == "DH":
+                    if holiday.others == "DH":
                         status = "NPD"
-                    elif holiday[0].others == "BH":
+                    elif holiday.others == "BH":
                         status = "BH"
-                    elif holiday[0].others == "PH":
+                    elif holiday.others == "PH":
                         status = "PH"
-                    elif holiday[0].others == "FH":
+                    elif holiday.others == "FH":
                         status = "FH"
             else:
                 status = '*'

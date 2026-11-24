@@ -27,17 +27,28 @@ def get_columns():
 
 def get_data(filters):
 	data = []
-	row = []
-	salary_slips = frappe.db.sql("""select * from `tabSalary Slip` where start_date between '%s' and '%s' and docstatus!=2"""%(filters.start_date, filters.end_date), as_dict=True)
+	salary_slips = frappe.db.sql("""SELECT ss.employee, ss.employee_name, ss.department, ss.bank_account_no,
+			ss.gross_pay, IFNULL(SUM(sd.amount), 0) AS pf
+		FROM `tabSalary Slip` ss
+		LEFT JOIN `tabSalary Detail` sd
+			ON sd.parent = ss.name
+			AND sd.parenttype = 'Salary Slip'
+			AND sd.salary_component = 'PF'
+		WHERE ss.start_date BETWEEN %(start_date)s AND %(end_date)s
+			AND ss.docstatus != 2
+		GROUP BY ss.name
+		ORDER BY ss.name""",
+		{"start_date": filters.start_date, "end_date": filters.end_date},
+		as_dict=True)
 	i = 1
 	for ss in salary_slips:
 		emp_id = ss.employee
 		emp_name = ss.employee_name
-		dep= ss.department
+		dep = ss.department
 		ac = ss.bank_account_no
 		sal = ss.gross_pay
-		pf = frappe.get_value('Salary Detail',{'salary_component':"PF",'parent':ss.name},["amount"] or 0)
-		row = [i,emp_id or "-",emp_name or "-",dep or "-",ac or "-",sal or 0,pf or 0]
+		pf = ss.pf
+		row = [i, emp_id or "-", emp_name or "-", dep or "-", ac or "-", sal or 0, pf or 0]
 		data.append(row)
-		i+=1
+		i += 1
 	return data

@@ -53,14 +53,8 @@ def get_casual_leaves(doc,method):
         # method to restrict the casual leave applications only 3 per month
         if isinstance(doc.from_date, str):
             doc.from_date = datetime.strptime(doc.from_date, "%Y-%m-%d").date()
-        if doc.from_date.day < 26:
-            month_start = (doc.from_date - relativedelta(months=1)).replace(day=26)
-            month_end = doc.from_date.replace(day=25)
-        else:
-            month_start = doc.from_date.replace(day=26)
-            month_end = (doc.from_date + relativedelta(months=1)).replace(day=25)
-        # month_start=get_first_day(doc.from_date)
-        # month_end=get_last_day(doc.to_date)
+        month_start=get_first_day(doc.from_date)
+        month_end=get_last_day(doc.from_date)
         cl_applications=frappe.get_all(
             "Leave Application",
             filters={

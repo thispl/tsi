@@ -35,64 +35,51 @@ def get_columns():
 
 def get_late(filters):
     data = []
-    late_entry = []    
+    params = {"from_date": filters.from_date, "to_date": filters.to_date}
     if filters.employee and not filters.department:
-        query = """SELECT MIN(permission_date) as permission_date, employee 
-                    FROM `tabLate Entry` 
-                    WHERE permission_date BETWEEN '%s' AND '%s' 
-                    AND employee = '%s' 
-                    AND docstatus = 1 
-                    GROUP BY employee 
-                    ORDER BY permission_date""" % (filters.from_date, filters.to_date, filters.employee)
-
+        cond = "AND employee = %(employee)s AND docstatus = 1"
+        params["employee"] = filters.employee
     elif not filters.employee and filters.department:
-        query = """SELECT MIN(permission_date) as permission_date, employee 
-                    FROM `tabLate Entry` 
-                    WHERE permission_date BETWEEN '%s' AND '%s' 
-                    AND department = '%s' 
-                    AND workflow_state = 'Approved' 
-                    GROUP BY employee 
-                    ORDER BY permission_date""" % (filters.from_date, filters.to_date, filters.department)
-
+        cond = "AND department = %(department)s AND workflow_state = 'Approved'"
+        params["department"] = filters.department
     elif filters.employee and filters.department:
-        query = """SELECT MIN(permission_date) as permission_date, employee 
-                    FROM `tabLate Entry` 
-                    WHERE permission_date BETWEEN '%s' AND '%s' 
-                    AND employee = '%s' 
-                    AND department = '%s' 
-                    AND workflow_state = 'Approved' 
-                    GROUP BY employee 
-                    ORDER BY permission_date""" % (filters.from_date, filters.to_date, filters.employee, filters.department)
-
+        cond = "AND employee = %(employee)s AND department = %(department)s AND workflow_state = 'Approved'"
+        params["employee"] = filters.employee
+        params["department"] = filters.department
     else:
-        query = """SELECT MIN(permission_date) as permission_date, employee 
-                    FROM `tabLate Entry` 
-                    WHERE permission_date BETWEEN '%s' AND '%s' 
-                    AND workflow_state = 'Approved' 
-                    GROUP BY employee 
-                    ORDER BY permission_date""" % (filters.from_date, filters.to_date)
+        cond = "AND workflow_state = 'Approved'"
 
+    late_entry = frappe.db.sql(
+        """SELECT MIN(permission_date) as permission_date, employee
+        FROM `tabLate Entry`
+        WHERE permission_date BETWEEN %(from_date)s AND %(to_date)s {cond}
+        GROUP BY employee
+        ORDER BY permission_date""".format(cond=cond),
+        params, as_dict=True)
 
-    late_entry = frappe.db.sql(query, as_dict=True)
-    frappe.errprint(late_entry)
+    stats = {}
+    for r in frappe.db.sql(
+        """SELECT employee, COUNT(*) as cnt, SUM(late) as tot
+        FROM `tabLate Entry`
+        WHERE permission_date BETWEEN %(from_date)s AND %(to_date)s
+            AND workflow_state = 'Approved'
+            AND employee IN %(emps)s
+        GROUP BY employee""",
+        {"from_date": filters.from_date, "to_date": filters.to_date,
+         "emps": tuple(la.employee for la in late_entry) or ("",)},
+        as_dict=True):
+        stats[r.employee] = r
+
+    emp_map = {e.name: e for e in frappe.get_all("Employee",
+        filters={"name": ("in", [la.employee for la in late_entry])},
+        fields=["name", "employee_name", "designation", "department"])} if late_entry else {}
+
     for la in late_entry:
-        tot = 0
-        count = frappe.db.count("Late Entry", {
-            'employee': la.employee,
-            'permission_date': ['Between', (filters.from_date, filters.to_date)],
-            'workflow_state': 'Approved'
-        })
-        emp_name = frappe.db.get_value("Employee", {'name': la.employee}, ['employee_name'])
-        desig = frappe.db.get_value("Employee", {'name': la.employee}, ['designation'])
-        dep = frappe.db.get_value("Employee", {'name': la.employee}, ['department'])
-        ltime = frappe.db.get_all("Late Entry", {
-            'employee': la.employee,
-            'permission_date': ['Between', (filters.from_date, filters.to_date)],
-            'workflow_state': 'Approved'
-        }, ['*'])
-        for l in ltime:
-            tot += int(l.late)  
-        row = [la.employee, emp_name, dep, desig, count, tot]    
+        s = stats.get(la.employee)
+        emp = emp_map.get(la.employee, frappe._dict())
+        count = s.cnt if s else 0
+        tot = s.tot if s and s.tot else 0
+        row = [la.employee, emp.get("employee_name"), emp.get("department"), emp.get("designation"), count, tot]
         data.append(row)
-    
+
     return data

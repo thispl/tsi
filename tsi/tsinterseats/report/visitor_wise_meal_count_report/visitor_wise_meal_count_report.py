@@ -1,6 +1,5 @@
 import frappe
 from frappe import _
-from datetime import datetime, timedelta
 
 def execute(filters=None):
     columns, data = [], []
@@ -25,82 +24,71 @@ def get_columns():
     return columns
 
 def get_data(filters):
-    count=0
-    item=0
     data = []
-    from_date = datetime.strptime(filters.get('from_date'), '%Y-%m-%d').date()
-    to_date = datetime.strptime(filters.get('to_date'), '%Y-%m-%d').date()
     name1 = filters.get('name1')
-    current_date = from_date
+    params = {"from_date": filters.get('from_date'), "to_date": filters.get('to_date')}
 
-    while current_date <= to_date:
-        query = """
-            SELECT
-                `tabVisitor Pass`.visiting_date,
-                `tabVisitor Pass`.name1,
-                `tabVisitor Pass`.employee,
-                `tabVisitor Pass`.company_name AS company,
-                `tabVisitor Pass`.purpose_of_visit,
-                `tabFood Items`.item,
-                SUM(`tabFood Items`.status) AS count
-            FROM
-                `tabVisitor Pass`
-            LEFT JOIN
-                `tabFood Items` ON `tabVisitor Pass`.name = `tabFood Items`.parent
-            WHERE
-                `tabVisitor Pass`.visiting_date = %s
-        """
-        params = [current_date]
+    query = """
+        SELECT
+            `tabVisitor Pass`.visiting_date,
+            `tabVisitor Pass`.name1,
+            `tabVisitor Pass`.employee,
+            `tabVisitor Pass`.company_name AS company,
+            `tabVisitor Pass`.purpose_of_visit,
+            `tabFood Items`.item,
+            SUM(`tabFood Items`.status) AS count
+        FROM
+            `tabVisitor Pass`
+        LEFT JOIN
+            `tabFood Items` ON `tabVisitor Pass`.name = `tabFood Items`.parent
+        WHERE
+            `tabVisitor Pass`.visiting_date BETWEEN %(from_date)s AND %(to_date)s
+    """
 
-        if name1:
-            query += " AND `tabVisitor Pass`.name1 = %s"
-            params.append(name1)
+    if name1:
+        query += " AND `tabVisitor Pass`.name1 = %(name1)s"
+        params["name1"] = name1
 
-        query += """
-            GROUP BY
-                `tabVisitor Pass`.visiting_date,
-                `tabVisitor Pass`.name1,
-                `tabVisitor Pass`.employee,
-                `tabVisitor Pass`.company_name,
-                `tabVisitor Pass`.purpose_of_visit,
-                `tabFood Items`.item
-        """
+    query += """
+        GROUP BY
+            `tabVisitor Pass`.visiting_date,
+            `tabVisitor Pass`.name1,
+            `tabVisitor Pass`.employee,
+            `tabVisitor Pass`.company_name,
+            `tabVisitor Pass`.purpose_of_visit,
+            `tabFood Items`.item
+        ORDER BY
+            `tabVisitor Pass`.visiting_date ASC
+    """
 
-        c = frappe.db.sql(query, tuple(params), as_dict=True)
-        employee_data = {}
-        
-        for row in c:
-            employee_id = row['name1']
-            employee_name = row['employee']
-            company = row['company']
-            visit = row['purpose_of_visit']
-            item = row['item'] or 0
-            count = row['count'] or 0
+    c = frappe.db.sql(query, params, as_dict=True)
+    items = frappe.db.sql("""SELECT name FROM `tabFood Menu` ORDER BY serial_no ASC""", as_dict=True)
 
-            if employee_id not in employee_data:
-                employee_data[employee_id] = {
-                    'employee': employee_name,
-                    'company': company,
-                    'purpose_of_visit': visit,
-                    'items': {item: count},
-                    'total': 0
-                }
+    visitor_data = {}
+    for row in c:
+        key = (row['visiting_date'], row['name1'])
+        item = row['item'] or 0
+        count = row['count'] or 0
+        if key not in visitor_data:
+            visitor_data[key] = {
+                'employee': row['employee'],
+                'company': row['company'],
+                'purpose_of_visit': row['purpose_of_visit'],
+                'items': {item: count},
+                'total': 0
+            }
+        else:
+            if item not in visitor_data[key]['items']:
+                visitor_data[key]['items'][item] = count or 0
             else:
-                if item not in employee_data[employee_id]['items']:
-                    employee_data[employee_id]['items'][item] = count or 0
-                else:
-                    employee_data[employee_id]['items'][item] += count or 0
+                visitor_data[key]['items'][item] += count or 0
+        visitor_data[key]['total'] += count
 
-            employee_data[employee_id]['total'] += count or 0
-
-        items = frappe.db.sql("""SELECT name FROM `tabFood Menu` ORDER BY serial_no ASC""", as_dict=True)
-
-        for employee_id, emp_data in employee_data.items():
-            row = [current_date, employee_id, emp_data['employee'], emp_data['company'], emp_data['purpose_of_visit']]
-            for item in items:
-                row.append(emp_data['items'].get(item.name, 0))
-            row.append(emp_data['total'])
-            data.append(row)
-        current_date += timedelta(days=1)
+    for (visiting_date, name1), vdata in visitor_data.items():
+        row = [visiting_date, name1, vdata['employee'], vdata['company'], vdata['purpose_of_visit']]
+        for item in items:
+            row.append(vdata['items'].get(item.name, 0))
+        row.append(vdata['total'])
+        data.append(row)
 
     return data

@@ -5,27 +5,21 @@ import frappe
 from frappe import _, msgprint
 from urllib.request import ftpwrapper
 from frappe.model.document import Document
-from frappe.utils import get_first_day, get_last_day, format_datetime,get_url_to_form,today
+from frappe.utils import get_first_day, get_last_day, format_datetime,get_url_to_form,today,flt
 from frappe.utils import time_diff
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
 class LateEntry(Document):
     def validate(self):
         # error will be thrown when permission hours exceeds 60 minutes
-        if self.late > 60:
+        if flt(self.late) > 60:
             frappe.throw("Permission Time exceeded 60 minutes")
         total = 0
         count=0
         if isinstance(self.permission_date, str):
             self.permission_date = datetime.strptime(self.permission_date, "%Y-%m-%d").date()
-        if self.permission_date.day < 26:
-            month_start = (self.permission_date - relativedelta(months=1)).replace(day=26)
-            month_end = self.permission_date.replace(day=25)
-        else:
-            month_start = self.permission_date.replace(day=26)
-            month_end = (self.permission_date + relativedelta(months=1)).replace(day=25)
-        # month_start = get_first_day(self.permission_date)
-        # month_end = get_last_day(self.permission_date)
+        month_start = get_first_day(self.permission_date)
+        month_end = get_last_day(self.permission_date)
         late_permission = frappe.db.get_all('Late Entry',{'employee':self.employee,'docstatus':['!=',2],"permission_date": ('between',(month_start,month_end))},['*'])
         for late in late_permission:
             count+=1
